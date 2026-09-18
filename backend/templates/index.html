@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetCheck - 网络诊断闭环管理中台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  <!-- Top Navigation -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
+          <i class="fa-solid fa-network-wired"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">NetCheck 客服网络诊断中台</h1>
+          <p class="text-xs text-slate-500">Android 客户网络故障快速闭环系统</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+          <i class="fa-solid fa-language text-slate-500 text-xs ml-1 mr-0.5"></i>
+          <select id="webLangSelect" onchange="changeWebLanguage(this.value)" class="text-xs bg-transparent border-0 font-medium text-slate-700 focus:outline-none cursor-pointer">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+          </select>
+        </div>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+          <span data-i18n="status_online">服务在线</span>
+        </span>
+        <button onclick="refreshData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-1.5 px-3 rounded-lg border border-slate-300 transition-colors flex items-center">
+          <i class="fa-solid fa-arrows-rotate mr-1.5"></i> <span data-i18n="btn_refresh">刷新数据</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Left Column: Generator & Quick Search (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Search by Tracking ID Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-magnifying-glass text-blue-600 mr-2"></i>
+              按单号查验报告
+            </h2>
+            <span class="text-xs text-slate-400">6位追踪码</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-4">客服输入客户截图上的 6 位 Tracking ID，立即检索详细诊断信息：</p>
+          <div class="flex space-x-2">
+            <input 
+              id="searchTrackingId" 
+              type="text" 
+              maxlength="6"
+              placeholder="如：K8A9B2" 
+              class="flex-1 uppercase font-mono tracking-widest text-base font-bold px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              onkeypress="if(event.key==='Enter') searchByTrackingId()"
+            />
+            <button 
+              onclick="searchByTrackingId()" 
+              class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-colors text-sm flex items-center">
+              查询
+            </button>
+          </div>
+        </div>
+
+        <!-- Instruction Generator Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-wand-magic-sparkles text-amber-500 mr-2"></i>
+              下发诊断指令生成器
+            </h2>
+            <span class="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded">Base64 JSON</span>
+          </div>
+
+          <form id="generateForm" onsubmit="handleGenerate(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">
+                测试目标主机 (支持域名或IP，逗号或换行分隔)
+              </label>
+              <textarea 
+                id="targetHostsInput" 
+                rows="3" 
+                placeholder="例如: 8.8.8.8, 1.1.1.1, google.com"
+                class="w-full text-sm font-mono p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                required>8.8.8.8, 1.1.1.1, baidu.com</textarea>
+            </div>
+
+            <!-- Historical target chips -->
+            <div id="historyChipsContainer" class="hidden">
+              <span class="text-[11px] text-slate-400 block mb-1.5">历史常用目标 (点击填入)：</span>
+              <div id="historyChips" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
+            <!-- Test Options -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
+                <input type="checkbox" id="optPing" checked class="w-4 h-4 text-blue-600 rounded mr-2">
+                <span><i class="fa-solid fa-signal mr-1 text-slate-400"></i> Ping 连通探测</span>
+              </label>
+              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
+                <input type="checkbox" id="optDns" checked class="w-4 h-4 text-blue-600 rounded mr-2">
+                <span><i class="fa-solid fa-globe mr-1 text-slate-400"></i> DNS 域名解析</span>
+              </label>
+            </div>
+
+            <!-- Config Advanced -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">超时毫秒 (timeout_ms)</label>
+                <input 
+                  type="number" 
+                  id="optTimeout" 
+                  value="20000" 
+                  class="w-full text-xs font-mono px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">上报接口 (report_url)</label>
+                <input 
+                  type="text" 
+                  id="optReportUrl" 
+                  class="w-full text-xs font-mono px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <button 
+              type="submit" 
+              class="w-full bg-slate-900 hover:bg-black text-white font-medium py-3 px-4 rounded-xl shadow-sm transition-all text-sm flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-paper-plane text-xs"></i>
+              <span>生成 Base64 诊断指令</span>
+            </button>
+          </form>
+
+          <!-- Generation Result Box -->
+          <div id="resultBox" class="mt-5 hidden border-t border-slate-200 pt-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800">下发指令代码 (发送给 Android 客户)：</span>
+              <button 
+                onclick="copyBase64Command()" 
+                id="copyBtn"
+                class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center">
+                <i class="fa-regular fa-copy mr-1"></i> 复制指令
+              </button>
+            </div>
+            <textarea 
+              id="generatedBase64" 
+              readonly 
+              rows="3" 
+              class="w-full text-xs font-mono p-2.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-700 select-all"></textarea>
+            
+            <div class="mt-3">
+              <details class="text-xs text-slate-500">
+                <summary class="cursor-pointer hover:text-slate-800 select-none">查看指令明文 JSON 结构</summary>
+                <pre id="generatedJson" class="mt-2 p-3 bg-slate-900 text-slate-200 rounded-lg overflow-x-auto text-[11px]"></pre>
+              </details>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Right Column: Reports Inspection Table & Detail Pane (7 cols) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <!-- Reports Overview -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center">
+                <i class="fa-solid fa-clipboard-list text-indigo-600 mr-2"></i>
+                诊断上报大盘 (最新上报)
+              </h2>
+              <p class="text-xs text-slate-500 mt-0.5">Android 客户端自动上报的完整网络体检报告</p>
+            </div>
+            <span id="reportCountBadge" class="text-xs bg-slate-100 text-slate-600 font-mono px-2.5 py-1 rounded-full">
+              共 0 条
+            </span>
+          </div>
+
+          <!-- Reports List Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 font-medium">
+                <tr>
+                  <th class="py-3 px-4">单号 (Tracking ID)</th>
+                  <th class="py-3 px-3">设备信息</th>
+                  <th class="py-3 px-3">网络环境</th>
+                  <th class="py-3 px-3">任务状态</th>
+                  <th class="py-3 px-4 text-right">时间 / 操作</th>
+                </tr>
+              </thead>
+              <tbody id="reportsTableBody" class="divide-y divide-slate-100 font-sans">
+                <tr>
+                  <td colspan="5" class="py-12 text-center text-slate-400">
+                    <i class="fa-solid fa-spinner fa-spin text-lg mb-2"></i>
+                    <p>正在加载最新诊断报告...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Selected Report Detail View Card -->
+        <div id="reportDetailCard" class="hidden bg-white rounded-2xl shadow-sm border border-blue-200 p-6">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-file-waveform"></i>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs text-slate-500">Tracking ID:</span>
+                  <span id="detailTrackingId" class="font-mono text-base font-bold text-blue-700"></span>
+                </div>
+                <div id="detailCreatedAt" class="text-[11px] text-slate-400"></div>
+              </div>
+            </div>
+            <button onclick="closeDetailCard()" class="text-slate-400 hover:text-slate-600 text-sm">
+              <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+          </div>
+
+          <!-- Device & Network Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+              <h4 class="text-xs font-bold text-slate-700 mb-2 flex items-center">
+                <i class="fa-solid fa-mobile-screen text-slate-400 mr-1.5"></i> 客户端设备环境
+              </h4>
+              <ul class="text-xs space-y-1 text-slate-600">
+                <li><span class="text-slate-400">机型：</span><span id="detailModel" class="font-medium"></span></li>
+                <li><span class="text-slate-400">系统：</span><span id="detailOs" class="font-medium"></span></li>
+              </ul>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+              <h4 class="text-xs font-bold text-slate-700 mb-2 flex items-center">
+                <i class="fa-solid fa-wifi text-slate-400 mr-1.5"></i> 网络连接环境
+              </h4>
+              <ul class="text-xs space-y-1 text-slate-600">
+                <li><span class="text-slate-400">类型：</span><span id="detailNetType" class="font-medium"></span></li>
+                <li><span class="text-slate-400">本地IP：</span><span id="detailLocalIp" class="font-mono"></span></li>
+                <li><span class="text-slate-400">代理/VPN：</span><span id="detailVpn" class="font-medium"></span></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Task Results -->
+          <div>
+            <h4 class="text-xs font-bold text-slate-800 mb-2.5 flex items-center">
+              <i class="fa-solid fa-terminal text-slate-500 mr-1.5"></i> 探测任务详细日志 (Ping / DNS)
+            </h4>
+            <div id="detailTasksList" class="space-y-3"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    let activeReports = [];
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const defaultUrl = window.location.origin + '/api/reports';
+      document.getElementById('optReportUrl').value = defaultUrl;
+      refreshData();
+      loadHistoryChips();
+    });
+
+    async function refreshData() {
+      await loadReports();
+      await loadHistoryChips();
+    }
+
+    async function loadHistoryChips() {
+      try {
+        const res = await fetch('/api/admin/history?limit=8');
+        if (!res.ok) return;
+        const list = await res.json();
+        const container = document.getElementById('historyChipsContainer');
+        const chips = document.getElementById('historyChips');
+        chips.innerHTML = '';
+        if (list.length > 0) {
+          container.classList.remove('hidden');
+          list.forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono px-2 py-0.5 rounded border border-slate-300 transition-colors';
+            btn.innerText = `${item.target_host} (${item.use_count})`;
+            btn.onclick = () => addTargetToInput(item.target_host);
+            chips.appendChild(btn);
+          });
+        } else {
+          container.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error("Failed to load target history", err);
+      }
+    }
+
+    function addTargetToInput(target) {
+      const input = document.getElementById('targetHostsInput');
+      const current = input.value.trim();
+      const hosts = current.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      if (!hosts.includes(target)) {
+        hosts.push(target);
+        input.value = hosts.join(', ');
+      }
+    }
+
+    async function handleGenerate(e) {
+      e.preventDefault();
+      const hostsStr = document.getElementById('targetHostsInput').value;
+      const targets = hostsStr.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      const ping_enabled = document.getElementById('optPing').checked;
+      const dns_enabled = document.getElementById('optDns').checked;
+      const timeout_ms = parseInt(document.getElementById('optTimeout').value) || 20000;
+      const report_url = document.getElementById('optReportUrl').value.trim() || (window.location.origin + '/api/reports');
+
+      if (targets.length === 0) {
+        alert("请输入至少一个测试目标主机！");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/admin/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targets,
+            ping_enabled,
+            dns_enabled,
+            timeout_ms,
+            report_url
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert("生成失败: " + (err.detail || res.statusText));
+          return;
+        }
+
+        const data = await res.json();
+        document.getElementById('generatedBase64').value = data.base64_command;
+        document.getElementById('generatedJson').textContent = JSON.stringify(data.command_json, null, 2);
+        document.getElementById('resultBox').classList.remove('hidden');
+        
+        loadHistoryChips();
+      } catch (err) {
+        alert("网络异常，无法生成指令");
+      }
+    }
+
+    function copyBase64Command() {
+      const text = document.getElementById('generatedBase64').value;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.innerHTML = '<i class="fa-solid fa-check text-emerald-600 mr-1"></i> 已复制!';
+        setTimeout(() => {
+          btn.innerHTML = '<i class="fa-regular fa-copy mr-1"></i> 复制指令';
+        }, 2000);
+      });
+    }
+
+    async function loadReports() {
+      const tbody = document.getElementById('reportsTableBody');
+      try {
+        const res = await fetch('/api/reports?limit=50');
+        if (!res.ok) throw new Error("Fetch failed");
+        const list = await res.json();
+        activeReports = list;
+        document.getElementById('reportCountBadge').innerText = `共 ${list.length} 条`;
+
+        if (list.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="5" class="py-12 text-center text-slate-400">
+                <i class="fa-regular fa-folder-open text-2xl mb-2 text-slate-300"></i>
+                <p>暂无客户端上报记录</p>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = list.map((item, idx) => {
+          const dev = item.device_info || {};
+          const net = item.network_env || {};
+          const results = item.task_results || [];
+          const successCount = results.filter(r => r.status === 'success').length;
+          const totalCount = results.length;
+          const isAllPass = totalCount > 0 && successCount === totalCount;
+
+          return `
+            <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="showReportDetailByIndex(${idx})">
+              <td class="py-3 px-4 font-mono font-bold text-blue-700">
+                ${item.tracking_id}
+              </td>
+              <td class="py-3 px-3">
+                <div class="font-medium text-slate-800">${dev.model || 'Unknown'}</div>
+                <div class="text-[11px] text-slate-400">${dev.os || ''}</div>
+              </td>
+              <td class="py-3 px-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                  ${net.type || 'Net'}
+                </span>
+                ${net.is_vpn ? '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">VPN</span>' : ''}
+              </td>
+              <td class="py-3 px-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${isAllPass ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                  <span class="w-1.5 h-1.5 rounded-full ${isAllPass ? 'bg-emerald-500' : 'bg-rose-500'} mr-1.5"></span>
+                  ${successCount}/${totalCount} 成功
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right">
+                <div class="text-[11px] text-slate-400 font-mono">${item.created_at || ''}</div>
+                <button class="text-blue-600 hover:text-blue-800 font-medium text-xs mt-0.5">查阅详情 &rarr;</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (err) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-8 text-center text-rose-500 text-xs">
+              加载上报记录失败，请检查服务状态
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    async function searchByTrackingId() {
+      const code = document.getElementById('searchTrackingId').value.trim().toUpperCase();
+      if (!code) {
+        alert("请输入6位 Tracking ID");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/reports/${code}`);
+        if (!res.ok) {
+          alert(`未找到单号为 ${code} 的诊断报告，请核对单号是否正确`);
+          return;
+        }
+        const report = await res.json();
+        renderDetailView(report);
+      } catch (e) {
+        alert("查询失败，服务可能不可达");
+      }
+    }
+
+    function showReportDetailByIndex(idx) {
+      if (activeReports[idx]) {
+        renderDetailView(activeReports[idx]);
+      }
+    }
+
+    function renderDetailView(report) {
+      const card = document.getElementById('reportDetailCard');
+      card.classList.remove('hidden');
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      document.getElementById('detailTrackingId').innerText = report.tracking_id;
+      document.getElementById('detailCreatedAt').innerText = '上报时间: ' + (report.created_at || '刚刚');
+
+      const dev = report.device_info || {};
+      document.getElementById('detailModel').innerText = dev.model || 'Unknown';
+      document.getElementById('detailOs').innerText = dev.os || 'Unknown';
+
+      const net = report.network_env || {};
+      document.getElementById('detailNetType').innerText = net.type || '未知';
+      document.getElementById('detailLocalIp').innerText = net.local_ip || '未知';
+      document.getElementById('detailVpn').innerText = net.is_vpn ? '⚠️ 开启了代理/VPN' : '未开启 (直接连网)';
+
+      const tasksContainer = document.getElementById('detailTasksList');
+      const results = report.task_results || [];
+
+      if (results.length === 0) {
+        tasksContainer.innerHTML = '<div class="text-slate-400 text-xs py-4 text-center">无测试任务结果</div>';
+        return;
+      }
+
+      tasksContainer.innerHTML = results.map(t => {
+        const isSuccess = t.status === 'success';
+        return `
+          <div class="border ${isSuccess ? 'border-slate-200 bg-white' : 'border-rose-200 bg-rose-50/30'} rounded-xl p-3.5 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center space-x-2">
+                <span class="font-mono font-semibold text-xs text-slate-800">${t.task || 'Task'}</span>
+              </div>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${isSuccess ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                ${isSuccess ? '成功 SUCCESS' : '失败 FAILED'}
+              </span>
+            </div>
+            <pre class="bg-slate-900 text-emerald-400 p-3 rounded-lg text-[11px] leading-relaxed overflow-x-auto max-h-48 whitespace-pre-wrap select-all">${t.raw_log || '无日志内容'}</pre>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function closeDetailCard() {
+      document.getElementById('reportDetailCard').classList.add('hidden');
+    }
+
+    const i18n = {
+      zh: {
+        title: "NetCheck 客服网络诊断中台",
+        subtitle: "Android 客户网络故障快速闭环系统",
+        status_online: "服务在线",
+        btn_refresh: "刷新数据",
+        search_title: "按单号查验报告",
+        search_hint: "客服输入客户截图上的 6 位 Tracking ID，立即检索详细诊断信息：",
+        search_btn: "查询",
+        gen_title: "下发诊断指令生成器",
+        label_targets: "测试目标主机 (支持域名或IP，逗号或换行分隔)",
+        ping_label: "Ping 连通探测",
+        dns_label: "DNS 域名解析",
+        timeout_label: "超时毫秒 (timeout_ms)",
+        api_label: "上报 API 接口地址",
+        btn_generate: "生成并下发诊断指令",
+        reports_title: "客户网络诊断上报记录",
+        th_tracking: "单号 Tracking ID",
+        th_device: "设备型号 / 系统",
+        th_network: "网络环境",
+        th_status: "执行状态",
+        th_time: "上报时间 / 操作"
+      },
+      en: {
+        title: "NetCheck Support Diagnostics Console",
+        subtitle: "Closed-loop Android Client Network Troubleshooting System",
+        status_online: "Online",
+        btn_refresh: "Refresh Data",
+        search_title: "Search by Tracking ID",
+        search_hint: "Enter the 6-digit Tracking ID from the customer's screenshot to view full diagnostic logs:",
+        search_btn: "Search",
+        gen_title: "Diagnostic Command Generator",
+        label_targets: "Target Hosts (Domain or IP, separated by comma/newline)",
+        ping_label: "Ping Probe",
+        dns_label: "DNS Resolution Probe",
+        timeout_label: "Timeout ms (timeout_ms)",
+        api_label: "Report API Endpoint URL",
+        btn_generate: "Generate Base64 Command",
+        reports_title: "Client Diagnostic Reports",
+        th_tracking: "Tracking ID",
+        th_device: "Device / OS",
+        th_network: "Network Env",
+        th_status: "Probe Status",
+        th_time: "Time / Action"
+      },
+      ar: {
+        title: "لوحة تحكم NetCheck لتشخيص الشبكة",
+        subtitle: "نظام استكشاف أعطال شبكة أندرويد والدعم الفني",
+        status_online: "الخدمة متصلة",
+        btn_refresh: "تحديث البيانات",
+        search_title: "البحث برقم التتبع",
+        search_hint: "أدخل رقم التتبع المكون من 6 خانات من لقطة شاشة العميل لمراجعة تفاصيل الفحص:",
+        search_btn: "بحث",
+        gen_title: "مولد أوامر التشخيص",
+        label_targets: "الخوادم المستهدفة (اسم النطاق أو IP مفصول بفاصلة أو سطر جديد)",
+        ping_label: "فحص Ping",
+        dns_label: "فحص دقة DNS",
+        timeout_label: "مهلة الانتظار بالمللي ثانية (timeout_ms)",
+        api_label: "رابط واجهة رفع التقارير API",
+        btn_generate: "توليد أمر التشخيص Base64",
+        reports_title: "سجلات تقارير تشخيص العملاء",
+        th_tracking: "رقم التتبع Tracking ID",
+        th_device: "طراز الجهاز / النظام",
+        th_network: "بيئة الشبكة",
+        th_status: "حالة الفحص",
+        th_time: "الوقت / الإجراء"
+      }
+    };
+
+    function changeWebLanguage(lang) {
+      localStorage.setItem('netcheck_web_lang', lang);
+      document.getElementById('webLangSelect').value = lang;
+      document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+      document.documentElement.lang = lang;
+      
+      const dict = i18n[lang] || i18n.zh;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+          el.innerText = dict[key];
+        }
+      });
+    }
+
+    // Initialize saved web language
+    const savedWebLang = localStorage.getItem('netcheck_web_lang') || 'zh';
+    changeWebLanguage(savedWebLang);
+  </script>
+</body>
+</html>

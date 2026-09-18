@@ -1,0 +1,6 @@
+{
+  "name": "NetCheck",
+  "description": "移动端网络诊断闭环系统，支持客服Web端生成诊断指令与查阅报告，Android客户端自动化执行Ping/DNS探测并上报",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

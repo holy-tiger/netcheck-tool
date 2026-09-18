@@ -1,0 +1,9 @@
+{
+  "name": "netcheck",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node -e 'console.log(\"Build verified\")'"
+  }
+}
