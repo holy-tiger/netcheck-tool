@@ -8,6 +8,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -87,6 +88,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -117,9 +119,7 @@ fun MainScreen(
     val currentLanguage by viewModel.currentLanguage.collectAsStateWithLifecycle()
 
     var inputCommand by remember {
-        mutableStateOf(
-            "eyJyZXBvcnRfdXJsIjoiaHR0cDovLzEwLjAuMi4yOjMwMDAvYXBpL3JlcG9ydHMiLCJ0aW1lb3V0X21zIjoyMDAwMCwidGFza3MiOlt7InR5cGUiOiJwaW5nIiwidGFyZ2V0cyI6WyI4LjguOC44IiwiMS4xLjEuMSJdfSx7InR5cGUiOiJkbnMiLCJ0YXJnZXRzIjpbImdvb2dsZS5jb20iXX1dfQ=="
-        )
+        mutableStateOf("")
     }
 
     var selectedHistoryItem by remember { mutableStateOf<DiagnosticHistoryEntity?>(null) }
@@ -134,21 +134,19 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(vertical = 4.dp)
                     ) {
-                        // Glowing Brand Icon Badge
+                        // Brand Logo
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            tonalElevation = 2.dp,
+                            color = Color.Transparent,
                             modifier = Modifier.size(42.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.NetworkCheck,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            Image(
+                                painter = painterResource(id = R.drawable.app_logo),
+                                contentDescription = stringResource(R.string.app_name),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(12.dp))
+                            )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f, fill = false)) {
@@ -561,108 +559,7 @@ fun IdleInputCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Dedicated Action Chips Row - Never overlaps or wraps awkwardly
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Quick Full-Health Check Chip
-                OutlinedButton(
-                    onClick = onQuickCheck,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f)
-                    ),
-                    modifier = Modifier.height(34.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Speed,
-                        contentDescription = stringResource(R.string.quick_check_chip),
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.quick_check_chip),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-
-                // Paste Command Chip
-                OutlinedButton(
-                    onClick = onPaste,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
-                    modifier = Modifier.height(34.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentPaste,
-                        contentDescription = stringResource(R.string.paste_button),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.paste_button),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                // Sample Command Chip
-                OutlinedButton(
-                    onClick = onLoadSample,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.height(34.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoFixHigh,
-                        contentDescription = stringResource(R.string.load_sample_button),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = stringResource(R.string.load_sample_button),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (input.isNotEmpty()) {
-                    OutlinedButton(
-                        onClick = onClear,
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        modifier = Modifier.height(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.clear_button),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = stringResource(R.string.clear_button),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Monospace Styled Text Area
+            // Monospace Styled Text Area with Clear Trailing Icon
             OutlinedTextField(
                 value = input,
                 onValueChange = onInputChange,
@@ -670,6 +567,20 @@ fun IdleInputCard(
                     .fillMaxWidth()
                     .height(120.dp)
                     .testTag("instruction_input"),
+                trailingIcon = {
+                    if (input.isNotEmpty()) {
+                        IconButton(
+                            onClick = onClear,
+                            modifier = Modifier.testTag("clear_input_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = stringResource(R.string.clear_all_button),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
                 placeholder = {
                     Text(
                         stringResource(R.string.instruction_hint),

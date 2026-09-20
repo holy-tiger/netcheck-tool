@@ -54,6 +54,7 @@
     <string name="quick_check_button">فحص شامل للشبكة بنقرة واحدة</string>
     <string name="quick_check_chip">فحص سريع</string>
     <string name="clear_button">مسح</string>
+    <string name="clear_all_button">مسح الكل</string>
     <string name="device_env_title">حالة الجهاز والشبكة</string>
     <string name="network_type">الشبكة الحالية</string>
     <string name="local_ip">عنوان IP المحلي</string>

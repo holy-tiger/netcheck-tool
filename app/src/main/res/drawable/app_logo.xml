@@ -1,0 +1,99 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background rounded squircle / shield plate -->
+    <path
+        android:pathData="M20,12 L88,12 A16,16 0 0,1 104,28 L104,80 A16,16 0 0,1 88,96 L20,96 A16,16 0 0,1 4,80 L4,28 A16,16 0 0,1 20,12 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="4"
+                android:startY="12"
+                android:endX="104"
+                android:endY="96"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FF0F172A" />
+                <item android:offset="0.5" android:color="#FF1E293B" />
+                <item android:offset="1.0" android:color="#FF0284C7" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Outer subtle highlight border -->
+    <path
+        android:pathData="M20,12 L88,12 A16,16 0 0,1 104,28 L104,80 A16,16 0 0,1 88,96 L20,96 A16,16 0 0,1 4,80 L4,28 A16,16 0 0,1 20,12 Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#4D38BDF8"
+        android:fillColor="#00000000" />
+
+    <!-- Radar / Wireless Signal Pulse Arcs (Top Center) -->
+    <path
+        android:pathData="M34,42 A28,28 0 0,1 74,42"
+        android:strokeWidth="3.5"
+        android:strokeColor="#6638BDF8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <path
+        android:pathData="M42,50 A16,16 0 0,1 66,50"
+        android:strokeWidth="3.5"
+        android:strokeColor="#CC38BDF8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Core Dynamic Speed Pulse / Waveform Path -->
+    <path
+        android:pathData="M24,68 L38,68 L46,46 L54,78 L62,56 L70,68 L84,68"
+        android:strokeWidth="4.5"
+        android:strokeColor="#FF38BDF8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Secondary Speed Neon Glow Waveform -->
+    <path
+        android:pathData="M24,68 L38,68 L46,46 L54,78 L62,56 L70,68 L84,68"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+
+    <!-- Network Diagnostic Nodes (Points) -->
+    <!-- Center Peak Node -->
+    <path
+        android:pathData="M46,46m-4,0a4,4 0 1,0 8,0a4,4 0 1,0 -8,0"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M46,46m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0"
+        android:fillColor="#FF0284C7" />
+
+    <!-- Center Trough Node -->
+    <path
+        android:pathData="M54,78m-3.5,0a3.5,3.5 0 1,0 7,0a3.5,3.5 0 1,0 -7,0"
+        android:fillColor="#FF10B981" />
+
+    <!-- Right Node -->
+    <path
+        android:pathData="M62,56m-3.5,0a3.5,3.5 0 1,0 7,0a3.5,3.5 0 1,0 -7,0"
+        android:fillColor="#FFFFFFFF" />
+
+    <!-- Speed Indicator Arrow / Compass Spike (Upper Right) -->
+    <path
+        android:pathData="M78,32 L86,30 L84,38 Z"
+        android:fillColor="#FF10B981" />
+    <path
+        android:pathData="M68,40 L84,32"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF10B981"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Telemetry Status Blip (Bottom Center) -->
+    <path
+        android:pathData="M54,26m-3,0a3,3 0 1,0 6,0a3,3 0 1,0 -6,0"
+        android:fillColor="#FF10B981" />
+</vector>
