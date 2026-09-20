@@ -84,6 +84,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * 一键全网体检：自动综合检测 Ping、DNS、HTTP 网页及 TCP 端口连通性
+     */
+    fun startQuickDiagnosis() {
+        val quickJson = JSONObject().apply {
+            put("report_url", "https://ais-dev-j3j2ubcrkh3fzla4fgtffc-690261017235.us-east1.run.app/api/reports")
+            put("timeout_ms", 15000)
+            put("tasks", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("type", "ping")
+                    put("targets", JSONArray().apply {
+                        put("8.8.8.8")
+                        put("1.1.1.1")
+                    })
+                })
+                put(JSONObject().apply {
+                    put("type", "dns")
+                    put("targets", JSONArray().apply {
+                        put("google.com")
+                        put("cloudflare.com")
+                    })
+                })
+                put(JSONObject().apply {
+                    put("type", "http")
+                    put("targets", JSONArray().apply {
+                        put("https://www.google.com")
+                    })
+                })
+                put(JSONObject().apply {
+                    put("type", "tcp")
+                    put("targets", JSONArray().apply {
+                        put("8.8.8.8:53")
+                        put("1.1.1.1:443")
+                    })
+                })
+                put(JSONObject().apply {
+                    put("type", "speed")
+                    put("targets", JSONArray().apply {
+                        put("https://speed.cloudflare.com/__down?bytes=5000000")
+                    })
+                })
+            })
+        }
+        val base64 = android.util.Base64.encodeToString(
+            quickJson.toString().toByteArray(Charsets.UTF_8),
+            android.util.Base64.NO_WRAP
+        )
+        startDiagnosis(base64)
+    }
+
+    /**
      * AI 约束：所有网络测试必须在 Dispatchers.IO 执行
      */
     fun startDiagnosis(rawBase64: String) {
@@ -146,18 +196,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                     val resultObj = JSONObject()
                     val stepTarget = "${item.target} (${index + 1}/$totalTasks)"
-                    if (item.type == "ping") {
-                        _statusMessage.value = lContext.getString(R.string.step_ping, stepTarget)
-                        val pingRes = NetworkEngine.executePing(item.target, timeoutMs)
-                        resultObj.put("task", pingRes.task)
-                        resultObj.put("status", pingRes.status)
-                        resultObj.put("raw_log", pingRes.raw_log)
-                    } else {
-                        _statusMessage.value = lContext.getString(R.string.step_dns, stepTarget)
-                        val dnsRes = NetworkEngine.executeDns(item.target)
-                        resultObj.put("task", dnsRes.task)
-                        resultObj.put("status", dnsRes.status)
-                        resultObj.put("raw_log", dnsRes.raw_log)
+                    when (item.type) {
+                        "ping" -> {
+                            _statusMessage.value = lContext.getString(R.string.step_ping, stepTarget)
+                            val pingRes = NetworkEngine.executePing(item.target, timeoutMs)
+                            resultObj.put("task", pingRes.task)
+                            resultObj.put("status", pingRes.status)
+                            resultObj.put("raw_log", pingRes.raw_log)
+                        }
+                        "dns" -> {
+                            _statusMessage.value = lContext.getString(R.string.step_dns, stepTarget)
+                            val dnsRes = NetworkEngine.executeDns(item.target)
+                            resultObj.put("task", dnsRes.task)
+                            resultObj.put("status", dnsRes.status)
+                            resultObj.put("raw_log", dnsRes.raw_log)
+                        }
+                        "http" -> {
+                            _statusMessage.value = lContext.getString(R.string.step_http, stepTarget)
+                            val httpRes = NetworkEngine.executeHttp(item.target, timeoutMs)
+                            resultObj.put("task", httpRes.task)
+                            resultObj.put("status", httpRes.status)
+                            resultObj.put("raw_log", httpRes.raw_log)
+                        }
+                        "tcp" -> {
+                            _statusMessage.value = lContext.getString(R.string.step_tcp, stepTarget)
+                            val tcpRes = NetworkEngine.executeTcp(item.target, timeoutMs)
+                            resultObj.put("task", tcpRes.task)
+                            resultObj.put("status", tcpRes.status)
+                            resultObj.put("raw_log", tcpRes.raw_log)
+                        }
+                        "speed", "download" -> {
+                            _statusMessage.value = lContext.getString(R.string.step_speed, stepTarget)
+                            val speedRes = NetworkEngine.executeSpeedTest(item.target, timeoutMs)
+                            resultObj.put("task", speedRes.task)
+                            resultObj.put("status", speedRes.status)
+                            resultObj.put("raw_log", speedRes.raw_log)
+                        }
+                        else -> {
+                            _statusMessage.value = lContext.getString(R.string.step_ping, stepTarget)
+                            val pingRes = NetworkEngine.executePing(item.target, timeoutMs)
+                            resultObj.put("task", pingRes.task)
+                            resultObj.put("status", pingRes.status)
+                            resultObj.put("raw_log", pingRes.raw_log)
+                        }
                     }
                     resultsList.put(resultObj)
                 }

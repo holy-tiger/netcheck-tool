@@ -109,7 +109,7 @@
             </div>
 
             <!-- Test Options -->
-            <div class="grid grid-cols-2 gap-3 pt-1">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
               <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
                 <input type="checkbox" id="optPing" checked class="w-4 h-4 text-blue-600 rounded mr-2">
                 <span><i class="fa-solid fa-signal mr-1 text-slate-400"></i> Ping 连通探测</span>
@@ -118,6 +118,31 @@
                 <input type="checkbox" id="optDns" checked class="w-4 h-4 text-blue-600 rounded mr-2">
                 <span><i class="fa-solid fa-globe mr-1 text-slate-400"></i> DNS 域名解析</span>
               </label>
+              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
+                <input type="checkbox" id="optHttp" checked class="w-4 h-4 text-blue-600 rounded mr-2">
+                <span><i class="fa-solid fa-link mr-1 text-slate-400"></i> HTTP 网页连通</span>
+              </label>
+              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
+                <input type="checkbox" id="optTcp" checked class="w-4 h-4 text-blue-600 rounded mr-2">
+                <span><i class="fa-solid fa-network-wired mr-1 text-slate-400"></i> TCP 端口探测</span>
+              </label>
+              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 sm:col-span-2">
+                <input type="checkbox" id="optSpeed" class="w-4 h-4 text-blue-600 rounded mr-2">
+                <span><i class="fa-solid fa-gauge-high mr-1 text-blue-500"></i> 下载网速测速 (Speed Test)</span>
+              </label>
+            </div>
+
+            <!-- Speed Test File URL Input -->
+            <div id="speedUrlField" class="pt-1">
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">
+                <i class="fa-solid fa-cloud-arrow-down text-blue-500 mr-1"></i> 测试下载用的文件 URL (留空时默认使用公共 5MB 测速源)
+              </label>
+              <input 
+                type="text" 
+                id="optSpeedUrl" 
+                placeholder="例如: https://speed.cloudflare.com/__down?bytes=10000000"
+                class="w-full text-xs font-mono px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
 
             <!-- Config Advanced -->
@@ -335,6 +360,10 @@
       const targets = hostsStr.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
       const ping_enabled = document.getElementById('optPing').checked;
       const dns_enabled = document.getElementById('optDns').checked;
+      const http_enabled = document.getElementById('optHttp').checked;
+      const tcp_enabled = document.getElementById('optTcp').checked;
+      const speed_enabled = document.getElementById('optSpeed').checked;
+      const speed_url = document.getElementById('optSpeedUrl').value.trim() || 'https://speed.cloudflare.com/__down?bytes=5000000';
       const timeout_ms = parseInt(document.getElementById('optTimeout').value) || 20000;
       const report_url = document.getElementById('optReportUrl').value.trim() || (window.location.origin + '/api/reports');
 
@@ -351,6 +380,10 @@
             targets,
             ping_enabled,
             dns_enabled,
+            http_enabled,
+            tcp_enabled,
+            speed_enabled,
+            speed_url,
             timeout_ms,
             report_url
           })

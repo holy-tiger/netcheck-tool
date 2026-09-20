@@ -48,6 +48,11 @@
     <string name="step_dns">جاري تنفيذ فحص دقة DNS (%1$s)...</string>
     <string name="step_reporting">جاري رفع تقرير التشخيص إلى الخادم...</string>
     <string name="step_complete">تم اكتمال مهمة التشخيص</string>
+    <string name="step_http">جاري فحص اتصال الويب HTTP (%1$s)...</string>
+    <string name="step_tcp">جاري فحص منفذ TCP (%1$s)...</string>
+    <string name="step_speed">جاري اختبار سرعة التحميل (%1$s)...</string>
+    <string name="quick_check_button">فحص شامل للشبكة بنقرة واحدة</string>
+    <string name="quick_check_chip">فحص سريع</string>
     <string name="clear_button">مسح</string>
     <string name="device_env_title">حالة الجهاز والشبكة</string>
     <string name="network_type">الشبكة الحالية</string>

@@ -206,6 +206,16 @@ const server = http.createServer(async (req, res) => {
       if (payload.dns_enabled) {
         tasks.push({ type: 'dns', targets });
       }
+      if (payload.http_enabled) {
+        tasks.push({ type: 'http', targets });
+      }
+      if (payload.tcp_enabled) {
+        tasks.push({ type: 'tcp', targets });
+      }
+      if (payload.speed_enabled) {
+        const speedTarget = payload.speed_url || 'https://speed.cloudflare.com/__down?bytes=5000000';
+        tasks.push({ type: 'speed', targets: [speedTarget] });
+      }
       if (tasks.length === 0) {
         tasks.push({ type: 'ping', targets });
       }

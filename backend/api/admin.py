@@ -23,6 +23,13 @@ async def generate_command(req: GenerateCommandRequest, request: Request):
         tasks.append({"type": "ping", "targets": targets})
     if req.dns_enabled:
         tasks.append({"type": "dns", "targets": targets})
+    if req.http_enabled:
+        tasks.append({"type": "http", "targets": targets})
+    if req.tcp_enabled:
+        tasks.append({"type": "tcp", "targets": targets})
+    if req.speed_enabled:
+        speed_target = req.speed_url or "https://speed.cloudflare.com/__down?bytes=5000000"
+        tasks.append({"type": "speed", "targets": [speed_target]})
 
     if not tasks:
         tasks.append({"type": "ping", "targets": targets})

@@ -20,3 +20,7 @@ class GenerateCommandRequest(BaseModel):
     targets: list[str] = Field(default_factory=list)
     ping_enabled: bool = True
     dns_enabled: bool = True
+    http_enabled: bool = True
+    tcp_enabled: bool = True
+    speed_enabled: bool = False
+    speed_url: str | None = None

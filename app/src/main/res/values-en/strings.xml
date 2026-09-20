@@ -48,6 +48,11 @@
     <string name="step_dns">Executing DNS resolution probe (%1$s)...</string>
     <string name="step_reporting">Uploading diagnostic report to server...</string>
     <string name="step_complete">Diagnostic task completed</string>
+    <string name="step_http">Executing HTTP web connectivity probe (%1$s)...</string>
+    <string name="step_tcp">Executing TCP port connectivity probe (%1$s)...</string>
+    <string name="step_speed">Executing download speed test (%1$s)...</string>
+    <string name="quick_check_button">One-Tap Full Network Health Check</string>
+    <string name="quick_check_chip">Quick Health Check</string>
     <string name="clear_button">Clear</string>
     <string name="device_env_title">Device &amp; Network Status</string>
     <string name="network_type">Network</string>

@@ -48,6 +48,11 @@
     <string name="step_dns">正在执行 DNS 域名解析 (%1$s)...</string>
     <string name="step_reporting">正在上报诊断日志至客服端...</string>
     <string name="step_complete">诊断任务执行完毕</string>
+    <string name="step_http">正在执行 HTTP 网页连通测试 (%1$s)...</string>
+    <string name="step_tcp">正在执行 TCP 端口连通探测 (%1$s)...</string>
+    <string name="step_speed">正在执行下载网速测试 (%1$s)...</string>
+    <string name="quick_check_button">一键网络全功能体检</string>
+    <string name="quick_check_chip">全网体检</string>
     <string name="clear_button">清空</string>
     <string name="device_env_title">设备与网络就绪状态</string>
     <string name="network_type">当前网络</string>

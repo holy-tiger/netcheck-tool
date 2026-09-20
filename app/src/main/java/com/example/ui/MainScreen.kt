@@ -286,9 +286,12 @@ fun MainScreen(
                                 }
                             },
                             onLoadSample = {
-                                inputCommand = "eyJyZXBvcnRfdXJsIjoiaHR0cDovLzEwLjAuMi4yOjMwMDAvYXBpL3JlcG9ydHMiLCJ0aW1lb3V0X21zIjoyMDAwMCwidGFza3MiOlt7InR5cGUiOiJwaW5nIiwidGFyZ2V0cyI6WyI4LjguOC44IiwiMS4xLjEuMSJdfSx7InR5cGUiOiJkbnMiLCJ0YXJnZXRzIjpbImdvb2dsZS5jb20iXX1dfQ=="
+                                inputCommand = "eyJyZXBvcnRfdXJsIjoiaHR0cHM6Ly9haXMtZGV2LWozajJ1YmNya2gzZnpsYTRmZ3RmZmMtNjkwMjYxMDE3MjM1LnVzLWVhc3QxLnJ1bi5hcHAvYXBpL3JlcG9ydHMiLCJ0aW1lb3V0X21zIjoxNTAwMCwidGFza3MiOlt7InR5cGUiOiJwaW5nIiwidGFyZ2V0cyI6WyI4LjguOC44IiwiMS4xLjEuMSJdfSx7InR5cGUiOiJkbnMiLCJ0YXJnZXRzIjpbImdvb2dsZS5jb20iXX0seyJ0eXBlIjoiaHR0cCIsInRhcmdldHMiOlsiaHR0cHM6Ly93d3cuZ29vZ2xlLmNvbSJdfSx7InR5cGUiOiJ0Y3AiLCJ0YXJnZXRzIjpbIjguOC44Ljg6NTMiLCIxLjEuMS4xOjQ0MyJdfV19"
                             },
                             onClear = { inputCommand = "" },
+                            onQuickCheck = {
+                                viewModel.startQuickDiagnosis()
+                            },
                             onStart = {
                                 if (inputCommand.isNotBlank()) {
                                     viewModel.startDiagnosis(inputCommand)
@@ -514,6 +517,7 @@ fun IdleInputCard(
     onPaste: () -> Unit,
     onLoadSample: () -> Unit,
     onClear: () -> Unit = {},
+    onQuickCheck: () -> Unit = {},
     onStart: () -> Unit
 ) {
     Card(
@@ -563,11 +567,36 @@ fun IdleInputCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Quick Full-Health Check Chip
+                OutlinedButton(
+                    onClick = onQuickCheck,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f)
+                    ),
+                    modifier = Modifier.height(34.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Speed,
+                        contentDescription = stringResource(R.string.quick_check_chip),
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.quick_check_chip),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+
                 // Paste Command Chip
                 OutlinedButton(
                     onClick = onPaste,
                     shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
                     modifier = Modifier.height(34.dp)
                 ) {
@@ -577,7 +606,7 @@ fun IdleInputCard(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(14.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = stringResource(R.string.paste_button),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
@@ -589,7 +618,7 @@ fun IdleInputCard(
                 OutlinedButton(
                     onClick = onLoadSample,
                     shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier.height(34.dp)
                 ) {
@@ -599,7 +628,7 @@ fun IdleInputCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = stringResource(R.string.load_sample_button),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
@@ -611,7 +640,7 @@ fun IdleInputCard(
                     OutlinedButton(
                         onClick = onClear,
                         shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         modifier = Modifier.height(34.dp)
                     ) {
@@ -705,6 +734,34 @@ fun IdleInputCard(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.3.sp
                     )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // One-Tap Full Network Health Check Secondary Button
+            OutlinedButton(
+                onClick = onQuickCheck,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("quick_check_button"),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.NetworkCheck,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.quick_check_button),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
