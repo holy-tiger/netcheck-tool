@@ -103,3 +103,16 @@ The Android quick-diagnosis flow currently contains a hard-coded Cloud Run
 `report_url` in `MainViewModel.kt`. When using a self-hosted backend, update
 that URL to the deployed `/api/reports` endpoint, or generate commands through
 `/api/admin/generate` and pass the returned Base64 command to the client.
+
+## 6. Docker Deployment
+
+For a one-command Python 3.11 deployment with persistent SQLite storage, run:
+
+```bash
+docker-compose up -d --build
+```
+
+The included Compose file supports legacy `docker-compose` v1 clients and
+publishes the service on port 13000 by default. See the complete startup,
+update, backup, and troubleshooting instructions in
+[`docker-guide.md`](docker-guide.md).

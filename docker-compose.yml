@@ -1,0 +1,27 @@
+version: "3.3"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: netcheck-backend:latest
+    ports:
+      - "${NETCHECK_PORT:-13000}:3000"
+    environment:
+      SQLITE_DB_PATH: /data/diagnostic.db
+    volumes:
+      - netcheck_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  netcheck_data:
