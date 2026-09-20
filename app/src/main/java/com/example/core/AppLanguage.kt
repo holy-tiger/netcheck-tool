@@ -28,12 +28,7 @@ enum class AppLanguage(
         }
 
         fun getDefaultLanguage(): AppLanguage {
-            val defaultLocale = Locale.getDefault().language
-            return when {
-                defaultLocale.startsWith("zh") -> CHINESE
-                defaultLocale.startsWith("ar") -> ARABIC
-                else -> ENGLISH
-            }
+            return ENGLISH
         }
 
         fun getSavedLanguage(context: Context): AppLanguage {

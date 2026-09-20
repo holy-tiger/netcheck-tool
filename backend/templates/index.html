@@ -633,7 +633,7 @@
       document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
       document.documentElement.lang = lang;
       
-      const dict = i18n[lang] || i18n.zh;
+      const dict = i18n[lang] || i18n.en;
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (dict[key]) {
@@ -642,8 +642,8 @@
       });
     }
 
-    // Initialize saved web language
-    const savedWebLang = localStorage.getItem('netcheck_web_lang') || 'zh';
+    // Initialize saved web language (default English)
+    const savedWebLang = localStorage.getItem('netcheck_web_lang') || 'en';
     changeWebLanguage(savedWebLang);
   </script>
 </body>
