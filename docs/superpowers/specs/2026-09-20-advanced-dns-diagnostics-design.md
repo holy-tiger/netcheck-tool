@@ -211,7 +211,7 @@ addresses, NS delegation differences, latencies, port checks, and ping results.
 
 ## Backend Behavior
 
-The report request model accepts a typed task-result object with the new DNS
+The FastAPI report request model accepts a typed task-result object with the new DNS
 fields optional and permits old task reports that contain only `task`, `status`,
 and `raw_log`. Task result JSON remains stored in the current SQLite JSON text
 column, so no database migration is required.
@@ -225,6 +225,9 @@ including task names, summaries, and raw logs.
 The admin generation API validates resolver IP literals and safe timeout
 ranges. It emits DNS options only on DNS tasks. The generator page supplies the
 same optional values and shows the resulting JSON and Base64 as it does today.
+The repository's Node development entry point in `server.js` mirrors report and
+command-generation behavior, so `npm run dev` produces and preserves the same
+new fields as FastAPI.
 
 ## Testing
 
@@ -244,10 +247,11 @@ cover:
 - UDP truncation followed by TCP;
 - malformed targets, operation timeouts, and the target-wide deadline.
 
-Backend tests cover default and overridden command generation, invalid resolver
-and timeout rejection, old and new report payload parsing, and preservation of
-structured fields on report retrieval. Dashboard rendering helpers are tested
-for diagnosis labels, unknown-code fallback, and HTML escaping.
+Backend tests cover the FastAPI and Node entry points: default and overridden
+command generation, invalid resolver and timeout rejection, old and new report
+payload parsing, and preservation of structured fields on report retrieval.
+Dashboard rendering helpers are tested for diagnosis labels, unknown-code
+fallback, and HTML escaping.
 
 Before completion, the focused tests run first, followed by the full Android
 JVM suite and backend test suite. A debug APK build verifies packaging and
