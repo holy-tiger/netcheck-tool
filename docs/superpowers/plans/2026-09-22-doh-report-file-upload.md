@@ -35,6 +35,7 @@ Create an empty `backend/tests/__init__.py` and create `backend/requirements-dev
 
 ```text
 -r requirements.txt
+httpx>=0.24.0
 httpx2
 ```
 
