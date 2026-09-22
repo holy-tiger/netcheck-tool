@@ -1,6 +1,8 @@
 import ipaddress
 import json
+import logging
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -8,6 +10,11 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 
 router = APIRouter(prefix="/api/files", tags=["files"])
+logger = logging.getLogger(__name__)
+
+ALLOWED_EXTENSIONS = {".json", ".txt", ".log"}
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+CHUNK_SIZE = 1024 * 1024
 
 
 def _utc_now() -> datetime:
@@ -79,25 +86,69 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     source_ip = resolve_source_ip(request)
 
     extension = Path(file.filename or "").suffix
-    uploaded_at = _utc_now()
-    timestamp = uploaded_at.strftime("%Y%m%dT%H%M%S%fZ")
-    filename = f"{source_ip.replace(':', '-')}_{timestamp}{extension}"
-    target_dir = Path(os.environ.get("DOH_REPORT_DIR", "/data/doh_report"))
-    target_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        contents = await file.read()
-        stored_contents = enrich_content(
-            extension,
-            contents,
-            request_metadata(request),
+    if extension.lower() not in ALLOWED_EXTENSIONS:
+        await file.close()
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file extension",
         )
-        target_dir.joinpath(filename).write_bytes(stored_contents)
+
+    target_dir = Path(os.environ.get("DOH_REPORT_DIR", "/data/doh_report"))
+    temporary_path = None
+    size = 0
+    try:
+        target_dir.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=".upload-",
+            dir=target_dir,
+        )
+        temporary_path = Path(temporary_name)
+        with os.fdopen(descriptor, "wb") as destination:
+            while chunk := await file.read(CHUNK_SIZE):
+                size += len(chunk)
+                if size > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail="File exceeds 20 MiB limit",
+                    )
+                destination.write(chunk)
+
+        original_content = temporary_path.read_bytes()
+        temporary_path.write_bytes(
+            enrich_content(
+                extension,
+                original_content,
+                request_metadata(request),
+            )
+        )
+
+        safe_ip = source_ip.replace(":", "-")
+        while True:
+            uploaded_at = _utc_now()
+            timestamp = uploaded_at.strftime("%Y%m%dT%H%M%S%fZ")
+            filename = f"{safe_ip}_{timestamp}{extension}"
+            try:
+                os.link(temporary_path, target_dir / filename)
+                break
+            except FileExistsError:
+                continue
+
+        return {
+            "status": "success",
+            "filename": filename,
+            "size": size,
+            "source_ip": source_ip,
+            "uploaded_at": uploaded_at.isoformat(),
+        }
+    except HTTPException:
+        raise
+    except OSError as exc:
+        logger.exception("Failed to store uploaded file")
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to store uploaded file",
+        ) from exc
     finally:
         await file.close()
-    return {
-        "status": "success",
-        "filename": filename,
-        "size": len(contents),
-        "source_ip": source_ip,
-        "uploaded_at": uploaded_at.isoformat(),
-    }
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)

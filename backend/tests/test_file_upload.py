@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -230,3 +231,111 @@ class FileUploadApiTest(unittest.TestCase):
             b'REMOTE_ADDR="testclient"\n\n'
         )
         self.assertEqual(expected_prefix + original, stored)
+
+    def test_unsupported_extension_is_rejected(self):
+        response = self.client.post(
+            "/api/files/upload",
+            files={"file": ("report.zip", b"x")},
+            headers={"X-Real-IP": "192.0.2.10"},
+        )
+
+        self.assertEqual(400, response.status_code)
+        self.assertEqual(
+            "Unsupported file extension",
+            response.json()["detail"],
+        )
+        self.assertEqual([], list(Path(self.temp_dir.name).iterdir()))
+
+    def test_oversized_file_leaves_no_partial_file(self):
+        response = self.client.post(
+            "/api/files/upload",
+            files={
+                "file": (
+                    "large.log",
+                    b"x" * (20 * 1024 * 1024 + 1),
+                )
+            },
+            headers={"X-Real-IP": "192.0.2.11"},
+        )
+
+        self.assertEqual(413, response.status_code)
+        self.assertEqual(
+            "File exceeds 20 MiB limit",
+            response.json()["detail"],
+        )
+        self.assertEqual([], list(Path(self.temp_dir.name).iterdir()))
+
+    def test_storage_failure_is_sanitized(self):
+        blocker = Path(self.temp_dir.name, "blocker")
+        blocker.write_text("file", encoding="utf-8")
+        with (
+            patch.dict(os.environ, {"DOH_REPORT_DIR": str(blocker)}),
+            patch("backend.api.files.logger.exception") as log_exception,
+        ):
+            response = self.client.post(
+                "/api/files/upload",
+                files={"file": ("report.txt", b"x")},
+                headers={"X-Real-IP": "192.0.2.12"},
+            )
+
+        self.assertEqual(500, response.status_code)
+        log_exception.assert_called_once_with("Failed to store uploaded file")
+        self.assertEqual(
+            "application/json",
+            response.headers.get("content-type"),
+        )
+        self.assertEqual(
+            "Unable to store uploaded file",
+            response.json()["detail"],
+        )
+        self.assertNotIn(str(blocker), response.text)
+
+    def test_timestamp_collision_does_not_overwrite_existing_file(self):
+        first = datetime(
+            2026,
+            9,
+            22,
+            8,
+            15,
+            30,
+            123456,
+            tzinfo=timezone.utc,
+        )
+        second = datetime(
+            2026,
+            9,
+            22,
+            8,
+            15,
+            30,
+            123457,
+            tzinfo=timezone.utc,
+        )
+        existing = Path(
+            self.temp_dir.name,
+            "192.0.2.13_20260922T081530123456Z.txt",
+        )
+        existing.write_bytes(b"existing")
+
+        with patch(
+            "backend.api.files._utc_now",
+            side_effect=[first, second],
+        ):
+            response = self.client.post(
+                "/api/files/upload",
+                files={"file": ("report.txt", b"new")},
+                headers={"X-Real-IP": "192.0.2.13"},
+            )
+
+        self.assertEqual(200, response.status_code)
+        self.assertEqual(b"existing", existing.read_bytes())
+        self.assertEqual(
+            "192.0.2.13_20260922T081530123457Z.txt",
+            response.json()["filename"],
+        )
+        self.assertTrue(
+            Path(
+                self.temp_dir.name,
+                response.json()["filename"],
+            ).read_bytes().endswith(b"new")
+        )
