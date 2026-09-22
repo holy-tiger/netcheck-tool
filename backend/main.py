@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from .database import init_db
 from .api.admin import router as admin_router
+from .api.files import router as files_router
 from .api.report import router as report_router
 
 @asynccontextmanager
@@ -32,6 +33,7 @@ app.add_middleware(
 # Include API routers
 app.include_router(admin_router)
 app.include_router(report_router)
+app.include_router(files_router)
 
 # Mount Web Dashboard
 @app.get("/", response_class=HTMLResponse)
