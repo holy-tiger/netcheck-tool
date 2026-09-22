@@ -739,7 +739,7 @@ route is registered:
 
 ```bash
 docker run --rm --entrypoint python netcheck-backend:file-upload-test -c \
-  "from backend.main import app; assert any(getattr(r, 'path', None) == '/api/files/upload' for r in app.routes)"
+  "from backend.main import app; assert '/api/files/upload' in app.openapi()['paths']"
 ```
 
 Expected: exit 0 under Python 3.11 without needing the test-only `httpx2`
