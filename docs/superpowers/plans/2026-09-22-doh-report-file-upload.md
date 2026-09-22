@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a bounded multipart upload API that stores safely named DoH report files in `/data/doh_report` and persists that directory on the Docker host.
+**Goal:** Add a bounded multipart upload API that enriches DoH reports with request-address metadata, stores them under safe names in `/data/doh_report`, and persists that directory on the Docker host.
 
-**Architecture:** A focused `backend/api/files.py` router owns source-IP resolution, filename generation, streaming, and cleanup. FastAPI registers that router, while Compose adds a nested bind mount under the existing `/data` named volume. Tests exercise the HTTP contract through `TestClient` with an isolated temporary upload directory.
+**Architecture:** A focused `backend/api/files.py` router owns source-IP resolution, request metadata capture, format-aware content enrichment, filename generation, streaming, and cleanup. FastAPI registers that router, while Compose adds a nested bind mount under the existing `/data` named volume. Tests exercise the HTTP contract through `TestClient` with an isolated temporary upload directory.
 
 **Tech Stack:** Python 3.11, FastAPI, Starlette `TestClient`, `python-multipart`, Python `unittest`, Docker Compose 3.3
 
@@ -12,7 +12,7 @@
 
 ## File Map
 
-- Create `backend/api/files.py`: upload route, IP resolution, filename generation, bounded streaming, and cleanup.
+- Create `backend/api/files.py`: upload route, IP resolution, metadata enrichment, filename generation, bounded streaming, and cleanup.
 - Create `backend/tests/__init__.py` and `backend/tests/test_file_upload.py`: HTTP and helper tests.
 - Create `backend/requirements-dev.txt`: backend test dependencies.
 - Modify `backend/main.py` and `backend/requirements.txt`: register the route and multipart parser.
@@ -41,8 +41,10 @@ httpx>=0.24.0
 Run:
 
 ```bash
-python3 -m venv /tmp/netcheck-backend-venv
-/tmp/netcheck-backend-venv/bin/pip install -r backend/requirements-dev.txt
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim sh -c \
+  "python -m venv /venv && /venv/bin/pip install -r backend/requirements-dev.txt"
 ```
 
 Expected: dependencies install successfully.
@@ -117,7 +119,10 @@ class FileUploadApiTest(unittest.TestCase):
 Run:
 
 ```bash
-/tmp/netcheck-backend-venv/bin/python -m unittest backend.tests.test_file_upload -v
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/python -m unittest backend.tests.test_file_upload -v
 ```
 
 Expected: all three tests FAIL because the response is HTTP 404 rather than
@@ -131,7 +136,8 @@ Append to `backend/requirements.txt`:
 python-multipart>=0.0.6
 ```
 
-Re-run `/tmp/netcheck-backend-venv/bin/pip install -r backend/requirements-dev.txt`.
+Re-run the dependency-container command from Step 1 so the persistent Python
+3.11 test environment receives `python-multipart`.
 
 Create `backend/api/files.py`:
 
@@ -272,14 +278,214 @@ Replace inline parsing with `source_ip = resolve_source_ip(request)`.
 
 - [ ] **Step 4: Verify green and commit**
 
-Run `/tmp/netcheck-backend-venv/bin/python -m unittest backend.tests.test_file_upload -v`. Expected: all tests PASS.
+Run:
+
+```bash
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/python -m unittest backend.tests.test_file_upload -v
+```
+
+Expected: all tests PASS.
 
 ```bash
 git add backend/api/files.py backend/tests/test_file_upload.py
 git commit -m "feat: derive upload names from report source IP"
 ```
 
-### Task 3: Enforce Limits and Atomic Cleanup
+### Task 3: Enrich Stored Reports with Request Metadata
+
+**Files:**
+- Modify: `backend/tests/test_file_upload.py`
+- Modify: `backend/api/files.py`
+
+- [ ] **Step 1: Write failing JSON enrichment tests**
+
+Import `json` in `backend/tests/test_file_upload.py`. In the original happy-path
+test, replace the exact stored-byte assertion with:
+
+```python
+        stored_payload = json.loads(
+            Path(self.temp_dir.name, body["filename"]).read_text(encoding="utf-8")
+        )
+        self.assertTrue(stored_payload["ok"])
+```
+
+Add these methods to `FileUploadApiTest`:
+
+```python
+    def test_json_upload_contains_server_observed_request_metadata(self):
+        response = self.client.post(
+            "/api/files/upload",
+            files={
+                "file": (
+                    "report.json",
+                    json.dumps({
+                        "result": "ok",
+                        "HTTP_CLIENT_IP": "spoofed-in-file",
+                        "REMOTE_ADDR": "spoofed-in-file",
+                    }).encode(),
+                    "application/json",
+                )
+            },
+            headers={
+                "Client-IP": "198.51.100.40",
+                "True-Client-IP": "198.51.100.41",
+                "X-Forwarded-For": "175.29.122.236",
+            },
+        )
+
+        self.assertEqual(200, response.status_code)
+        stored = json.loads(
+            Path(self.temp_dir.name, response.json()["filename"]).read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual("ok", stored["result"])
+        self.assertEqual("198.51.100.40", stored["HTTP_CLIENT_IP"])
+        self.assertEqual("198.51.100.41", stored["HTTP_TRUE_CLIENT_IP"])
+        self.assertEqual("175.29.122.236", stored["HTTP_X_FORWARDED_FOR"])
+        self.assertEqual("testclient", stored["REMOTE_ADDR"])
+
+    def test_invalid_json_variants_are_rejected_without_a_file(self):
+        cases = (
+            ("malformed.json", b"{not json"),
+            ("array.json", b"[]"),
+            ("binary.json", b"\xff"),
+        )
+        for filename, contents in cases:
+            with self.subTest(filename=filename):
+                response = self.client.post(
+                    "/api/files/upload",
+                    files={"file": (filename, contents, "application/json")},
+                    headers={"X-Real-IP": "192.0.2.30"},
+                )
+                self.assertEqual(400, response.status_code)
+                self.assertEqual(
+                    "JSON upload must contain a UTF-8 object",
+                    response.json()["detail"],
+                )
+                self.assertEqual([], list(Path(self.temp_dir.name).iterdir()))
+```
+
+- [ ] **Step 2: Write the failing text-prefix test**
+
+Add:
+
+```python
+    def test_text_upload_prefixes_null_headers_and_preserves_original_bytes(self):
+        original = b"first line\nsecond line\xff"
+        response = self.client.post(
+            "/api/files/upload",
+            files={"file": ("report.log", original, "application/octet-stream")},
+            headers={"X-Real-IP": "192.0.2.31"},
+        )
+
+        self.assertEqual(200, response.status_code)
+        stored = Path(self.temp_dir.name, response.json()["filename"]).read_bytes()
+        expected_prefix = (
+            b"HTTP_CLIENT_IP=null\n"
+            b"HTTP_TRUE_CLIENT_IP=null\n"
+            b"HTTP_X_FORWARDED_FOR=null\n"
+            b'REMOTE_ADDR="testclient"\n\n'
+        )
+        self.assertEqual(expected_prefix + original, stored)
+```
+
+- [ ] **Step 3: Run the enrichment tests and verify red**
+
+Run:
+
+```bash
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/python -m unittest backend.tests.test_file_upload -v
+```
+
+Expected: JSON metadata keys are absent, invalid JSON variants are accepted,
+and the text metadata prefix is absent.
+
+- [ ] **Step 4: Implement metadata capture and format-aware enrichment**
+
+Import `json` and add these functions to `backend/api/files.py`:
+
+```python
+def request_metadata(request: Request) -> dict[str, str | None]:
+    return {
+        "HTTP_CLIENT_IP": request.headers.get("Client-IP"),
+        "HTTP_TRUE_CLIENT_IP": request.headers.get("True-Client-IP"),
+        "HTTP_X_FORWARDED_FOR": request.headers.get("X-Forwarded-For"),
+        "REMOTE_ADDR": request.client.host if request.client else None,
+    }
+
+
+def enrich_content(
+    extension: str,
+    content: bytes,
+    metadata: dict[str, str | None],
+) -> bytes:
+    if extension.lower() == ".json":
+        try:
+            payload = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail="JSON upload must contain a UTF-8 object",
+            ) from exc
+        if not isinstance(payload, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="JSON upload must contain a UTF-8 object",
+            )
+        payload.update(metadata)
+        return json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+
+    prefix = "".join(
+        f"{key}={json.dumps(value, ensure_ascii=False)}\n"
+        for key, value in metadata.items()
+    ) + "\n"
+    return prefix.encode("utf-8") + content
+```
+
+In the endpoint, replace the raw write with:
+
+```python
+    contents = await file.read()
+    stored_contents = enrich_content(extension, contents, request_metadata(request))
+    target_dir.joinpath(filename).write_bytes(stored_contents)
+```
+
+Continue returning `len(contents)` so the response size describes the original
+upload rather than the enriched stored file.
+
+- [ ] **Step 5: Run all upload tests and verify green**
+
+Run:
+
+```bash
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/python -m unittest backend.tests.test_file_upload -v
+```
+
+Expected: all tests PASS; JSON fields override uploaded spoof values, absent
+headers become `null`, and the text suffix matches the original bytes exactly.
+
+- [ ] **Step 6: Commit metadata enrichment**
+
+```bash
+git add backend/api/files.py backend/tests/test_file_upload.py
+git commit -m "feat: add request metadata to uploaded reports"
+```
+
+### Task 4: Enforce Limits and Atomic Cleanup
 
 **Files:**
 - Modify: `backend/tests/test_file_upload.py`
@@ -356,7 +562,10 @@ Import `datetime` and `timezone`, then add the collision test:
 Run:
 
 ```bash
-/tmp/netcheck-backend-venv/bin/python -m unittest backend.tests.test_file_upload -v
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/python -m unittest backend.tests.test_file_upload -v
 ```
 
 Expected: unsupported and oversized files are accepted, collisions overwrite,
@@ -392,6 +601,10 @@ Replace the route body after resolving the IP with this implementation:
                 if size > MAX_UPLOAD_BYTES:
                     raise HTTPException(status_code=413, detail="File exceeds 20 MiB limit")
                 destination.write(chunk)
+        original_content = temporary_path.read_bytes()
+        temporary_path.write_bytes(
+            enrich_content(extension, original_content, request_metadata(request))
+        )
         safe_ip = source_ip.replace(":", "-")
         while True:
             uploaded_at = _utc_now()
@@ -421,7 +634,10 @@ Import `logging` and `tempfile`, and define `logger = logging.getLogger(__name__
 Run:
 
 ```bash
-/tmp/netcheck-backend-venv/bin/python -m unittest discover -s backend/tests -v
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/python -m unittest discover -s backend/tests -v
 ```
 
 Expected: all upload tests PASS, including cleanup and collision preservation.
@@ -431,7 +647,7 @@ git add backend/api/files.py backend/tests/test_file_upload.py
 git commit -m "feat: validate and safely persist uploaded reports"
 ```
 
-### Task 4: Persist Uploads in Docker and Document Deployment
+### Task 5: Persist Uploads in Docker and Document Deployment
 
 **Files:**
 - Modify: `docker-compose.yml:11-15`
@@ -463,7 +679,10 @@ sudo chown 10001:10001 /data/doh_report
 docker-compose up -d --build
 ```
 
-Document that UID `10001` is the non-root container user, SQLite remains on `netcheck_data`, and uploaded files persist on the host. Add an example:
+Document that UID `10001` is the non-root container user, SQLite remains on
+`netcheck_data`, and uploaded files persist on the host. State that JSON
+objects receive four top-level request metadata fields, while `.txt` and
+`.log` files receive the same fields as a four-line prefix. Add an example:
 
 ```bash
 curl --fail -H 'X-Real-IP: 192.0.2.20' -F 'file=@./example.json' \
@@ -485,15 +704,21 @@ git commit -m "docs: persist uploaded DoH reports in Docker"
 
 Expected: all commands exit 0.
 
-### Task 5: Final Verification
+### Task 6: Final Verification
 
 **Files:** Verify every file listed in the file map.
 
 - [ ] **Step 1: Run all backend tests**
 
 ```bash
-/tmp/netcheck-backend-venv/bin/pip install -r backend/requirements-dev.txt
-/tmp/netcheck-backend-venv/bin/python -m unittest discover -s backend/tests -v
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/pip install -r backend/requirements-dev.txt
+docker run --rm \
+  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -w /workspace python:3.11-slim \
+  /venv/bin/python -m unittest discover -s backend/tests -v
 ```
 
 Expected: zero failures and zero errors.
@@ -523,7 +748,7 @@ dependency in the production image.
 - [ ] **Step 4: Audit the result**
 
 ```bash
-git diff --check HEAD~3..HEAD
+git diff --check HEAD~5..HEAD
 git status --short
 ```
 
