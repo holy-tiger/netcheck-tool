@@ -12,6 +12,7 @@ services:
       SQLITE_DB_PATH: /data/diagnostic.db
     volumes:
       - netcheck_data:/data
+      - /data/doh_report:/data/doh_report
     restart: unless-stopped
     healthcheck:
       test:

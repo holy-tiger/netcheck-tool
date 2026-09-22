@@ -22,15 +22,38 @@ docker-compose --version
 在项目根目录执行：
 
 ```bash
+sudo mkdir -p /data/doh_report
+sudo chown 10001:10001 /data/doh_report
 docker-compose up -d --build
 ```
 
 该命令会构建 Python 3.11 镜像、启动后端，并创建持久化数据库卷
-`netcheck_data`。服务默认地址如下：
+`netcheck_data`。容器使用非 root 用户 UID `10001`，因此启动前需要确保
+宿主机 `/data/doh_report` 目录归该 UID 所有。Compose 会把该目录绑定到容器内
+同一路径，上传的 DoH 报告在容器替换后仍会保留；SQLite 数据仍由
+`netcheck_data` 命名卷管理。服务默认地址如下：
 
 - 管理页面：`http://服务器地址:13000/`
 - 健康检查：`http://服务器地址:13000/health`
 - API 文档：`http://服务器地址:13000/docs`
+
+## 上传 DoH 报告文件
+
+上传接口为 `POST /api/files/upload`，使用 multipart 字段 `file`。仅接受
+`.json`、`.txt` 和 `.log` 文件，原始上传内容最大为 20 MiB。例如：
+
+```bash
+curl --fail \
+  -H 'X-Real-IP: 192.0.2.20' \
+  -F 'file=@./example.json' \
+  http://127.0.0.1:13000/api/files/upload
+ls -lh /data/doh_report
+```
+
+JSON 对象会加入 `HTTP_CLIENT_IP`、`HTTP_TRUE_CLIENT_IP`、
+`HTTP_X_FORWARDED_FOR` 和 `REMOTE_ADDR` 四个顶层字段；客户端提交的同名字段
+会被服务端观测值覆盖。`.txt` 和 `.log` 文件会在原始内容前加入相同的四行
+元数据。文件名由来源 IP、UTC 时间戳和原扩展名组成。
 
 验证服务：
 
@@ -130,5 +153,13 @@ docker-compose logs --tail=200 backend
 
 若提示 13000 端口已占用，请通过 `NETCHECK_PORT` 改用其他端口。若提示数据库
 没有写权限，检查容器是否仍挂载 `netcheck_data:/data`，不要手工替换卷内文件的
-所有者。生产环境还应在服务前配置 Nginx 或 Caddy、HTTPS 和访问控制；当前 API
-允许所有 CORS 来源且没有身份认证，不适合直接暴露到公网。
+所有者。若报告目录没有写权限，请检查宿主机 `/data/doh_report` 是否属于 UID
+`10001`。
+
+上传接口确定文件名来源 IP 时，依次使用 `X-Forwarded-For` 的第一个地址、
+`X-Real-IP` 和 TCP 对端地址。写入报告的 `REMOTE_ADDR` 始终是 TCP 对端地址。
+反向代理必须覆盖客户端传入的转发头，并应限制客户端绕过代理直接访问后端，
+否则客户端可以伪造报告中的代理头元数据和文件名来源地址。
+
+生产环境还应在服务前配置 Nginx 或 Caddy、HTTPS 和访问控制；当前 API 允许所有
+CORS 来源且没有身份认证，不适合直接暴露到公网。
