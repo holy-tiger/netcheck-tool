@@ -35,7 +35,7 @@ Create an empty `backend/tests/__init__.py` and create `backend/requirements-dev
 
 ```text
 -r requirements.txt
-httpx>=0.24.0
+httpx2
 ```
 
 Run:
@@ -739,16 +739,16 @@ route is registered:
 
 ```bash
 docker run --rm --entrypoint python netcheck-backend:file-upload-test -c \
-  "from backend.main import app; assert any(r.path == '/api/files/upload' for r in app.routes)"
+  "from backend.main import app; assert any(getattr(r, 'path', None) == '/api/files/upload' for r in app.routes)"
 ```
 
-Expected: exit 0 under Python 3.11 without needing the test-only `httpx`
+Expected: exit 0 under Python 3.11 without needing the test-only `httpx2`
 dependency in the production image.
 
 - [ ] **Step 4: Audit the result**
 
 ```bash
-git diff --check HEAD~5..HEAD
+git diff --check main...HEAD
 git status --short
 ```
 
