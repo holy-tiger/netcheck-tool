@@ -42,7 +42,7 @@ Run:
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim sh -c \
   "python -m venv /venv && /venv/bin/pip install -r backend/requirements-dev.txt"
 ```
@@ -120,7 +120,7 @@ Run:
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/python -m unittest backend.tests.test_file_upload -v
 ```
@@ -282,7 +282,7 @@ Run:
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/python -m unittest backend.tests.test_file_upload -v
 ```
@@ -399,7 +399,7 @@ Run:
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/python -m unittest backend.tests.test_file_upload -v
 ```
@@ -470,7 +470,7 @@ Run:
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/python -m unittest backend.tests.test_file_upload -v
 ```
@@ -563,7 +563,7 @@ Run:
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/python -m unittest backend.tests.test_file_upload -v
 ```
@@ -635,7 +635,7 @@ Run:
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/python -m unittest discover -s backend/tests -v
 ```
@@ -712,11 +712,11 @@ Expected: all commands exit 0.
 
 ```bash
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/pip install -r backend/requirements-dev.txt
 docker run --rm \
-  -v "$PWD:/workspace" -v /tmp/netcheck-backend-venv:/venv \
+  -v "$PWD:/workspace" -v /tmp/netcheck-doh-upload-venv:/venv \
   -w /workspace python:3.11-slim \
   /venv/bin/python -m unittest discover -s backend/tests -v
 ```
