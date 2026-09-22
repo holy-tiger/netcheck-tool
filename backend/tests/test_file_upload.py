@@ -1,3 +1,4 @@
+import json
 import os
 import tempfile
 import unittest
@@ -88,10 +89,12 @@ class FileUploadApiTest(unittest.TestCase):
             r"^198\.51\.100\.24_\d{8}T\d{12}Z\.JSON$",
         )
         self.assertRegex(body["uploaded_at"], r"^\d{4}-\d{2}-\d{2}T")
-        self.assertEqual(
-            b'{"ok":true}',
-            Path(self.temp_dir.name, body["filename"]).read_bytes(),
+        stored_payload = json.loads(
+            Path(self.temp_dir.name, body["filename"]).read_text(
+                encoding="utf-8",
+            )
         )
+        self.assertTrue(stored_payload["ok"])
 
     def test_empty_supported_file_is_accepted(self):
         response = self.client.post(
@@ -131,3 +134,99 @@ class FileUploadApiTest(unittest.TestCase):
             r"^2001-db8--7_\d{8}T\d{12}Z\.log$",
         )
         self.assertNotIn("private", body["filename"])
+
+    def test_json_upload_contains_server_observed_request_metadata(self):
+        response = self.client.post(
+            "/api/files/upload",
+            files={
+                "file": (
+                    "report.json",
+                    json.dumps(
+                        {
+                            "result": "ok",
+                            "HTTP_CLIENT_IP": "spoofed-in-file",
+                            "REMOTE_ADDR": "spoofed-in-file",
+                        }
+                    ).encode(),
+                    "application/json",
+                )
+            },
+            headers={
+                "Client-IP": "198.51.100.40",
+                "True-Client-IP": "198.51.100.41",
+                "X-Forwarded-For": "175.29.122.236",
+            },
+        )
+
+        self.assertEqual(200, response.status_code)
+        stored = json.loads(
+            Path(
+                self.temp_dir.name,
+                response.json()["filename"],
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual("ok", stored["result"])
+        self.assertEqual("198.51.100.40", stored["HTTP_CLIENT_IP"])
+        self.assertEqual("198.51.100.41", stored["HTTP_TRUE_CLIENT_IP"])
+        self.assertEqual(
+            "175.29.122.236",
+            stored["HTTP_X_FORWARDED_FOR"],
+        )
+        self.assertEqual("testclient", stored["REMOTE_ADDR"])
+
+    def test_invalid_json_variants_are_rejected_without_a_file(self):
+        cases = (
+            ("malformed.json", b"{not json"),
+            ("array.json", b"[]"),
+            ("binary.json", b"\xff"),
+        )
+        for filename, contents in cases:
+            with self.subTest(filename=filename):
+                response = self.client.post(
+                    "/api/files/upload",
+                    files={
+                        "file": (
+                            filename,
+                            contents,
+                            "application/json",
+                        )
+                    },
+                    headers={"X-Real-IP": "192.0.2.30"},
+                )
+
+                self.assertEqual(400, response.status_code)
+                self.assertEqual(
+                    "JSON upload must contain a UTF-8 object",
+                    response.json()["detail"],
+                )
+                self.assertEqual(
+                    [],
+                    list(Path(self.temp_dir.name).iterdir()),
+                )
+
+    def test_text_upload_prefixes_null_headers_and_preserves_original_bytes(self):
+        original = b"first line\nsecond line\xff"
+        response = self.client.post(
+            "/api/files/upload",
+            files={
+                "file": (
+                    "report.log",
+                    original,
+                    "application/octet-stream",
+                )
+            },
+            headers={"X-Real-IP": "192.0.2.31"},
+        )
+
+        self.assertEqual(200, response.status_code)
+        stored = Path(
+            self.temp_dir.name,
+            response.json()["filename"],
+        ).read_bytes()
+        expected_prefix = (
+            b"HTTP_CLIENT_IP=null\n"
+            b"HTTP_TRUE_CLIENT_IP=null\n"
+            b"HTTP_X_FORWARDED_FOR=null\n"
+            b'REMOTE_ADDR="testclient"\n\n'
+        )
+        self.assertEqual(expected_prefix + original, stored)
