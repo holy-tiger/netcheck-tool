@@ -4,9 +4,55 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
+from backend.api.files import resolve_source_ip
 from backend.main import app
+
+
+def make_request(headers=(), client=("203.0.113.8", 43123)):
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/files/upload",
+        "headers": [
+            (key.lower().encode(), value.encode())
+            for key, value in headers
+        ],
+        "client": client,
+        "server": ("testserver", 80),
+        "scheme": "http",
+        "query_string": b"",
+    }
+    return Request(scope)
+
+
+class SourceIpTest(unittest.TestCase):
+    def test_invalid_forwarded_for_falls_back_to_real_ip(self):
+        request = make_request(
+            (
+                ("X-Forwarded-For", "invalid"),
+                ("X-Real-IP", "192.0.2.9"),
+            )
+        )
+
+        self.assertEqual("192.0.2.9", resolve_source_ip(request))
+
+    def test_missing_proxy_headers_fall_back_to_tcp_peer(self):
+        self.assertEqual("203.0.113.8", resolve_source_ip(make_request()))
+
+    def test_no_valid_address_is_rejected(self):
+        request = make_request(
+            (("X-Real-IP", "invalid"),),
+            client=("also-invalid", 1),
+        )
+
+        with self.assertRaises(HTTPException) as context:
+            resolve_source_ip(request)
+
+        self.assertEqual(400, context.exception.status_code)
 
 
 class FileUploadApiTest(unittest.TestCase):
@@ -64,3 +110,24 @@ class FileUploadApiTest(unittest.TestCase):
         )
 
         self.assertEqual(422, response.status_code)
+
+    def test_ipv6_and_original_path_are_sanitized(self):
+        response = self.client.post(
+            "/api/files/upload",
+            files={
+                "file": (
+                    "../../private/report.log",
+                    b"dns output",
+                    "text/plain",
+                )
+            },
+            headers={"X-Forwarded-For": "2001:db8::7"},
+        )
+
+        self.assertEqual(200, response.status_code)
+        body = response.json()
+        self.assertRegex(
+            body["filename"],
+            r"^2001-db8--7_\d{8}T\d{12}Z\.log$",
+        )
+        self.assertNotIn("private", body["filename"])
