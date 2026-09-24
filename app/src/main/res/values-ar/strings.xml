@@ -62,4 +62,12 @@
     <string name="status_ready">جاهز</string>
     <string name="input_char_count">%1$d حرف</string>
     <string name="card_action_chips">إجراءات سريعة</string>
+    <string name="step_doh">جاري فحص تحليل DoH المشفر (%1$s)...</string>
+    <string name="step_proxy">جاري فحص البروكسي المحلي وتحليل النطاقات (%1$s)...</string>
+    <string name="step_analyzing">جاري إعداد تقرير التشخيص الذكي والحلول...</string>
+    <string name="analysis_card_title">التشخيص الذكي للشبكة والحلول المقترحة</string>
+    <string name="analysis_issue_title">المشاكل والتهديدات المكتشفة</string>
+    <string name="analysis_solution_title">الحلول والإرشادات الموصى بها</string>
+    <string name="doh_results_title">تفاصيل فحص DoH المشفر</string>
+    <string name="proxy_results_title">سجل فحص البروكسي المحلي</string>
 </resources>

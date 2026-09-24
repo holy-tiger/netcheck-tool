@@ -386,4 +386,297 @@ object NetworkEngine {
                 durationMs = totalElapsed
             )
         }
+
+    /**
+     * DoH (DNS over HTTPS) 域名解析专项检测
+     */
+    suspend fun executeDoh(
+        serverUrl: String,
+        domain: String,
+        timeoutMs: Long = 15000L
+    ): TaskExecutionResult = withContext(Dispatchers.IO) {
+        val dohResult = DohEngine.queryDoh(serverUrl, domain, timeoutMs)
+        val cleanDomain = domain.trim()
+        val cleanServer = serverUrl.trim()
+        TaskExecutionResult(
+            task = "doh|$cleanServer|$cleanDomain",
+            status = if (dohResult.isSuccess) "success" else "failed",
+            raw_log = dohResult.rawLog,
+            durationMs = dohResult.durationMs
+        )
+    }
+
+    /**
+     * 内置本地代理服务器综合测试 (防端口冲突 / 原生与 WebView 双模)
+     */
+    suspend fun executeProxyTest(
+        context: android.content.Context,
+        urls: List<String>,
+        modes: List<String>,
+        dohServers: List<String> = emptyList(),
+        dnsServers: List<String> = emptyList(),
+        hostsMapping: Map<String, String> = emptyMap(),
+        requestedPort: Int = 0,
+        timeoutMs: Long = 20000L
+    ): List<TaskExecutionResult> = withContext(Dispatchers.IO) {
+        val results = mutableListOf<TaskExecutionResult>()
+
+        // 1. 启动内置本地代理服务器 (自动处理端口冲突)
+        val proxy = LocalProxyServer(
+            requestedPort = requestedPort,
+            dohServers = dohServers,
+            dnsServers = dnsServers,
+            hostsMapping = hostsMapping
+        )
+        val actualPort = proxy.start()
+
+        try {
+            val effectiveUrls = if (urls.isEmpty()) listOf("https://example.com") else urls
+            val effectiveModes = if (modes.isEmpty()) listOf("native") else modes
+
+            for (url in effectiveUrls) {
+                var cleanUrl = url.trim()
+                if (!cleanUrl.startsWith("http://", ignoreCase = true) && !cleanUrl.startsWith("https://", ignoreCase = true)) {
+                    cleanUrl = "https://$cleanUrl"
+                }
+
+                // 原生 Native 访问模式测试
+                if (effectiveModes.contains("native")) {
+                    val nativeRes = executeNativeProxyTest(
+                        targetUrl = cleanUrl,
+                        proxyPort = actualPort,
+                        proxy = proxy,
+                        timeoutMs = timeoutMs
+                    )
+                    results.add(nativeRes)
+                }
+
+                // WebView 访问模式测试
+                if (effectiveModes.contains("webview")) {
+                    val webViewRes = executeWebViewProxyTest(
+                        context = context,
+                        targetUrl = cleanUrl,
+                        proxyPort = actualPort,
+                        proxy = proxy,
+                        timeoutMs = timeoutMs
+                    )
+                    results.add(webViewRes)
+                }
+            }
+        } finally {
+            proxy.stop()
+        }
+
+        results
+    }
+
+    private suspend fun executeNativeProxyTest(
+        targetUrl: String,
+        proxyPort: Int,
+        proxy: LocalProxyServer,
+        timeoutMs: Long
+    ): TaskExecutionResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        val sbLog = StringBuilder()
+        sbLog.append("=== Local Proxy Native Test: ").append(targetUrl).append(" ===\n")
+        sbLog.append("Local Proxy Server: 127.0.0.1:").append(proxyPort)
+        if (proxy.portHadConflict) {
+            sbLog.append(" (⚠️ 请求端口冲突，已自动安全转移至空闲端口)\n")
+        } else {
+            sbLog.append(" (动态端口无冲突保障)\n")
+        }
+
+        var status = "failed"
+        val proxyObj = java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress("127.0.0.1", proxyPort))
+
+        try {
+            val okHttpClient = okhttp3.OkHttpClient.Builder()
+                .proxy(proxyObj)
+                .connectTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                .followRedirects(true)
+                .build()
+
+            val request = okhttp3.Request.Builder()
+                .url(targetUrl)
+                .header("User-Agent", "NetCheck-ProxyTester/1.0 (Android Native)")
+                .build()
+
+            val callStart = System.currentTimeMillis()
+            val response = okHttpClient.newCall(request).execute()
+            val roundtripTime = System.currentTimeMillis() - callStart
+
+            val code = response.code
+            val message = response.message
+            val contentType = response.header("Content-Type") ?: "unknown"
+            val bodyString = response.body?.string() ?: ""
+            val snippet = if (bodyString.length > 250) bodyString.substring(0, 250) + "..." else bodyString
+
+            // 提取代理记录中的解析 IP 与解析耗时
+            val uri = java.net.URI(targetUrl)
+            val host = uri.host ?: ""
+            val records = proxy.getRecords()
+            val matchedRecord = records.find { it.host.equals(host, ignoreCase = true) }
+
+            sbLog.append("Target Host: ").append(host).append("\n")
+            if (matchedRecord != null) {
+                sbLog.append("Resolution Method: ").append(matchedRecord.method).append("\n")
+                sbLog.append("Resolved IP: ").append(matchedRecord.resolvedIp).append("\n")
+                if (matchedRecord.allIps.size > 1) {
+                    sbLog.append("All Resolved IPs: ").append(matchedRecord.allIps.joinToString(", ")).append("\n")
+                }
+                sbLog.append("DNS Resolution Latency: ").append(matchedRecord.durationMs).append(" ms\n")
+            } else {
+                sbLog.append("Resolved IP: (Proxied via 127.0.0.1:").append(proxyPort).append(")\n")
+            }
+
+            sbLog.append("HTTP Response: ").append(code).append(" ").append(message).append("\n")
+            sbLog.append("Roundtrip Latency: ").append(roundtripTime).append(" ms\n")
+            sbLog.append("Content-Type: ").append(contentType).append("\n")
+            sbLog.append("Response Length: ").append(bodyString.length).append(" chars\n")
+            sbLog.append("Content Snippet: \n").append(snippet.trim()).append("\n")
+
+            if (code in 200..399) {
+                status = "success"
+                sbLog.append("[Result]: Native Proxy Request Succeeded\n")
+            } else {
+                sbLog.append("[Result]: Native Proxy returned HTTP error ").append(code).append("\n")
+            }
+        } catch (e: Exception) {
+            sbLog.append("[Exception: ").append(e.javaClass.simpleName).append("]: ").append(e.message ?: "Unknown error").append("\n")
+        }
+
+        val totalDuration = System.currentTimeMillis() - startTime
+        TaskExecutionResult(
+            task = "proxy_test|native|$targetUrl",
+            status = status,
+            raw_log = sbLog.toString(),
+            durationMs = totalDuration
+        )
+    }
+
+    private suspend fun executeWebViewProxyTest(
+        context: android.content.Context,
+        targetUrl: String,
+        proxyPort: Int,
+        proxy: LocalProxyServer,
+        timeoutMs: Long
+    ): TaskExecutionResult {
+        val startTime = System.currentTimeMillis()
+        val sbLog = StringBuilder()
+        sbLog.append("=== Local Proxy WebView Test: ").append(targetUrl).append(" ===\n")
+        sbLog.append("Local Proxy Server: 127.0.0.1:").append(proxyPort).append("\n")
+
+        var status = "failed"
+        var pageTitle = ""
+        var httpCode = 200
+
+        try {
+            // 在主线程调度 WebView 执行
+            withContext(Dispatchers.Main) {
+                val deferred = kotlinx.coroutines.CompletableDeferred<Boolean>()
+                var webView: android.webkit.WebView? = null
+                try {
+                    webView = android.webkit.WebView(context)
+                    webView.settings.javaScriptEnabled = true
+                    webView.settings.domStorageEnabled = true
+
+                    val proxyObj = java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress("127.0.0.1", proxyPort))
+                    val interceptClient = okhttp3.OkHttpClient.Builder()
+                        .proxy(proxyObj)
+                        .connectTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                        .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+                        .followRedirects(true)
+                        .build()
+
+                    webView.webViewClient = object : android.webkit.WebViewClient() {
+                        override fun shouldInterceptRequest(
+                            view: android.webkit.WebView?,
+                            request: android.webkit.WebResourceRequest?
+                        ): android.webkit.WebResourceResponse? {
+                            val reqUrl = request?.url?.toString() ?: return null
+                            return try {
+                                val okReq = okhttp3.Request.Builder()
+                                    .url(reqUrl)
+                                    .header("User-Agent", "NetCheck-WebViewProxy/1.0")
+                                    .build()
+                                val resp = interceptClient.newCall(okReq).execute()
+                                val contentType = resp.header("Content-Type") ?: "text/html; charset=utf-8"
+                                val mimeType = contentType.split(";")[0].trim()
+                                val encoding = if (contentType.contains("charset=")) contentType.split("charset=")[1].trim() else "utf-8"
+                                val stream = resp.body?.byteStream() ?: java.io.ByteArrayInputStream(ByteArray(0))
+                                httpCode = resp.code
+                                android.webkit.WebResourceResponse(mimeType, encoding, resp.code, resp.message.ifEmpty { "OK" }, emptyMap(), stream)
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            pageTitle = view?.title ?: ""
+                            deferred.complete(true)
+                        }
+
+                        override fun onReceivedError(
+                            view: android.webkit.WebView?,
+                            errorCode: Int,
+                            description: String?,
+                            failingUrl: String?
+                        ) {
+                            super.onReceivedError(view, errorCode, description, failingUrl)
+                            sbLog.append("[WebView Error]: ").append(description).append(" (Code: ").append(errorCode).append(")\n")
+                            deferred.complete(false)
+                        }
+                    }
+
+                    webView.loadUrl(targetUrl)
+
+                    // 限制等待时间
+                    kotlinx.coroutines.withTimeoutOrNull(timeoutMs) {
+                        deferred.await()
+                    } ?: run {
+                        sbLog.append("[WebView Timeout]: Page loading timed out after ").append(timeoutMs).append(" ms\n")
+                    }
+                } finally {
+                    try {
+                        webView?.stopLoading()
+                        webView?.destroy()
+                    } catch (_: Throwable) {}
+                }
+            }
+
+            val uri = java.net.URI(targetUrl)
+            val host = uri.host ?: ""
+            val records = proxy.getRecords()
+            val matchedRecord = records.find { it.host.equals(host, ignoreCase = true) }
+
+            sbLog.append("Target Host: ").append(host).append("\n")
+            if (matchedRecord != null) {
+                sbLog.append("Resolution Method: ").append(matchedRecord.method).append("\n")
+                sbLog.append("Resolved IP: ").append(matchedRecord.resolvedIp).append("\n")
+                sbLog.append("DNS Resolution Latency: ").append(matchedRecord.durationMs).append(" ms\n")
+            }
+
+            sbLog.append("Rendered Page Title: ").append(pageTitle.ifEmpty { "(No Title)" }).append("\n")
+            sbLog.append("HTTP Status: ").append(httpCode).append("\n")
+
+            if (httpCode in 200..399) {
+                status = "success"
+                sbLog.append("[Result]: WebView Proxy Page Rendered Successfully\n")
+            } else {
+                sbLog.append("[Result]: WebView Proxy returned HTTP status ").append(httpCode).append("\n")
+            }
+        } catch (e: Throwable) {
+            sbLog.append("[WebView Exception: ").append(e.javaClass.simpleName).append("]: ").append(e.message ?: "Unknown error").append("\n")
+        }
+
+        val totalDuration = System.currentTimeMillis() - startTime
+        return TaskExecutionResult(
+            task = "proxy_test|webview|$targetUrl",
+            status = status,
+            raw_log = sbLog.toString(),
+            durationMs = totalDuration
+        )
+    }
 }

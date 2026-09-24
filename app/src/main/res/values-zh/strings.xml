@@ -62,4 +62,12 @@
     <string name="status_ready">已就绪</string>
     <string name="input_char_count">%1$d 个字符</string>
     <string name="card_action_chips">快捷操作</string>
+    <string name="step_doh">正在执行 DoH 加密域名解析 (%1$s)...</string>
+    <string name="step_proxy">正在执行内置代理与域名解析测试 (%1$s)...</string>
+    <string name="step_analyzing">正在生成智能诊断分析报告与解决方案...</string>
+    <string name="analysis_card_title">智能网络诊断结论与解决方案</string>
+    <string name="analysis_issue_title">检出的网络异常与隐患</string>
+    <string name="analysis_solution_title">推荐解决方案与处理指引</string>
+    <string name="doh_results_title">DoH 域名解析专项检测</string>
+    <string name="proxy_results_title">内置代理服务器测试记录</string>
 </resources>

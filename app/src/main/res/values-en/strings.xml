@@ -62,4 +62,12 @@
     <string name="status_ready">Ready</string>
     <string name="input_char_count">%1$d characters</string>
     <string name="card_action_chips">Quick Actions</string>
+    <string name="step_doh">Executing DoH encrypted resolution (%1$s)...</string>
+    <string name="step_proxy">Executing local proxy &amp; domain resolution test (%1$s)...</string>
+    <string name="step_analyzing">Generating intelligent network diagnosis &amp; solutions...</string>
+    <string name="analysis_card_title">Intelligent Diagnostics &amp; Solutions</string>
+    <string name="analysis_issue_title">Detected Issues</string>
+    <string name="analysis_solution_title">Recommended Solutions</string>
+    <string name="doh_results_title">DoH Resolution Details</string>
+    <string name="proxy_results_title">Local Proxy &amp; Resolver Details</string>
 </resources>

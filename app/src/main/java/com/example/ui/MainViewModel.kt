@@ -5,10 +5,13 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.R
+import com.example.core.AnalysisReport
 import com.example.core.AppLanguage
 import com.example.core.Base64Decoder
+import com.example.core.NetworkDiagnosticAnalyzer
 import com.example.core.NetworkEngine
 import com.example.core.SystemUtils
+import com.example.core.TaskExecutionResult
 import com.example.data.AppDatabase
 import com.example.data.DiagnosticHistoryEntity
 import com.example.network.ReportApi
@@ -41,6 +44,19 @@ sealed class AppState {
     data class Failed(val reportJsonStr: String) : AppState()
 }
 
+sealed class DiagnosisTaskItem {
+    data class Standard(val type: String, val target: String) : DiagnosisTaskItem()
+    data class Doh(val serverUrl: String, val domain: String) : DiagnosisTaskItem()
+    data class Proxy(
+        val urls: List<String>,
+        val modes: List<String>,
+        val dohServers: List<String>,
+        val dnsServers: List<String>,
+        val hostsMapping: Map<String, String>,
+        val port: Int
+    ) : DiagnosisTaskItem()
+}
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
@@ -57,6 +73,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _lastGeneratedJson = MutableStateFlow<String>("")
     val lastGeneratedJson: StateFlow<String> = _lastGeneratedJson.asStateFlow()
+
+    private val _analysisReport = MutableStateFlow<AnalysisReport?>(null)
+    val analysisReport: StateFlow<AnalysisReport?> = _analysisReport.asStateFlow()
 
     private val _currentLanguage = MutableStateFlow(AppLanguage.getSavedLanguage(application))
     val currentLanguage: StateFlow<AppLanguage> = _currentLanguage.asStateFlow()
@@ -81,10 +100,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resetToIdle() {
         _appState.value = AppState.Idle
         _statusMessage.value = ""
+        _analysisReport.value = null
     }
 
     /**
-     * 一键全网体检：自动综合检测 Ping、DNS、HTTP 网页及 TCP 端口连通性
+     * 一键全网体检：自动综合检测 Ping、DNS、HTTP 网页、TCP 端口连通性、DoH 加密解析及内置代理测试
      */
     fun startQuickDiagnosis() {
         val quickJson = JSONObject().apply {
@@ -106,6 +126,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     })
                 })
                 put(JSONObject().apply {
+                    put("type", "doh")
+                    put("servers", JSONArray().apply {
+                        put("https://cloudflare-dns.com/dns-query")
+                        put("https://dns.google/dns-query")
+                    })
+                    put("domains", JSONArray().apply {
+                        put("google.com")
+                        put("cloudflare.com")
+                    })
+                })
+                put(JSONObject().apply {
                     put("type", "http")
                     put("targets", JSONArray().apply {
                         put("https://www.google.com")
@@ -117,6 +148,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         put("8.8.8.8:53")
                         put("1.1.1.1:443")
                     })
+                })
+                put(JSONObject().apply {
+                    put("type", "proxy_test")
+                    put("urls", JSONArray().apply {
+                        put("https://example.com")
+                    })
+                    put("modes", JSONArray().apply {
+                        put("native")
+                        put("webview")
+                    })
+                    put("doh_servers", JSONArray().apply {
+                        put("https://cloudflare-dns.com/dns-query")
+                    })
+                    put("hosts_mapping", JSONObject().apply {
+                        put("example.com", "93.184.216.34")
+                    })
+                    put("proxy_port", 0)
                 })
                 put(JSONObject().apply {
                     put("type", "speed")
@@ -165,83 +213,180 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val networkEnv = SystemUtils.getNetworkEnv(getApplication())
 
                 // 3. 构建待执行任务队列
-                data class TaskItem(val type: String, val target: String)
-                val taskQueue = mutableListOf<TaskItem>()
+                val taskQueue = mutableListOf<DiagnosisTaskItem>()
 
                 for (i in 0 until tasksArray.length()) {
                     val taskObj = tasksArray.optJSONObject(i) ?: continue
                     val type = taskObj.optString("type", "ping").lowercase()
-                    val targetsArray = taskObj.optJSONArray("targets") ?: JSONArray()
-                    for (j in 0 until targetsArray.length()) {
-                        val target = targetsArray.optString(j, "").trim()
-                        if (target.isNotEmpty()) {
-                            taskQueue.add(TaskItem(type, target))
+
+                    when (type) {
+                        "doh" -> {
+                            val serversArr = taskObj.optJSONArray("servers") ?: JSONArray()
+                            val domainsArr = taskObj.optJSONArray("domains") ?: JSONArray()
+                            val sList = mutableListOf<String>()
+                            for (s in 0 until serversArr.length()) {
+                                val srv = serversArr.optString(s, "").trim()
+                                if (srv.isNotEmpty()) sList.add(srv)
+                            }
+                            if (sList.isEmpty()) sList.add("https://cloudflare-dns.com/dns-query")
+
+                            for (d in 0 until domainsArr.length()) {
+                                val dom = domainsArr.optString(d, "").trim()
+                                if (dom.isNotEmpty()) {
+                                    for (srv in sList) {
+                                        taskQueue.add(DiagnosisTaskItem.Doh(srv, dom))
+                                    }
+                                }
+                            }
+                        }
+                        "proxy_test", "proxy" -> {
+                            val urlsArr = taskObj.optJSONArray("urls") ?: JSONArray()
+                            val uList = mutableListOf<String>()
+                            for (u in 0 until urlsArr.length()) {
+                                val urlStr = urlsArr.optString(u, "").trim()
+                                if (urlStr.isNotEmpty()) uList.add(urlStr)
+                            }
+                            if (uList.isEmpty()) uList.add("https://example.com")
+
+                            val modesArr = taskObj.optJSONArray("modes") ?: JSONArray()
+                            val mList = mutableListOf<String>()
+                            for (m in 0 until modesArr.length()) {
+                                val modeStr = modesArr.optString(m, "native").lowercase()
+                                if (!mList.contains(modeStr)) mList.add(modeStr)
+                            }
+                            if (mList.isEmpty()) mList.add("native")
+
+                            val dohArr = taskObj.optJSONArray("doh_servers") ?: JSONArray()
+                            val dohList = mutableListOf<String>()
+                            for (ds in 0 until dohArr.length()) {
+                                val s = dohArr.optString(ds, "").trim()
+                                if (s.isNotEmpty()) dohList.add(s)
+                            }
+
+                            val dnsArr = taskObj.optJSONArray("dns_servers") ?: JSONArray()
+                            val dnsList = mutableListOf<String>()
+                            for (ds in 0 until dnsArr.length()) {
+                                val s = dnsArr.optString(ds, "").trim()
+                                if (s.isNotEmpty()) dnsList.add(s)
+                            }
+
+                            val hostsObj = taskObj.optJSONObject("hosts_mapping") ?: JSONObject()
+                            val hMap = mutableMapOf<String, String>()
+                            val keys = hostsObj.keys()
+                            while (keys.hasNext()) {
+                                val k = keys.next()
+                                hMap[k.lowercase()] = hostsObj.optString(k, "").trim()
+                            }
+
+                            val port = taskObj.optInt("proxy_port", 0)
+                            taskQueue.add(DiagnosisTaskItem.Proxy(uList, mList, dohList, dnsList, hMap, port))
+                        }
+                        else -> {
+                            val targetsArray = taskObj.optJSONArray("targets") ?: JSONArray()
+                            for (j in 0 until targetsArray.length()) {
+                                val target = targetsArray.optString(j, "").trim()
+                                if (target.isNotEmpty()) {
+                                    taskQueue.add(DiagnosisTaskItem.Standard(type, target))
+                                }
+                            }
                         }
                     }
                 }
 
                 if (taskQueue.isEmpty()) {
                     // Fallback default target if none provided
-                    taskQueue.add(TaskItem("ping", "8.8.8.8"))
-                    taskQueue.add(TaskItem("dns", "google.com"))
+                    taskQueue.add(DiagnosisTaskItem.Standard("ping", "8.8.8.8"))
+                    taskQueue.add(DiagnosisTaskItem.Standard("dns", "google.com"))
                 }
 
                 // 4. 逐项执行网络测试 (全部在 Dispatchers.IO)
                 val resultsList = JSONArray()
+                val executedResults = mutableListOf<TaskExecutionResult>()
                 val totalTasks = taskQueue.size
 
                 for ((index, item) in taskQueue.withIndex()) {
                     val currentProgress = 0.2f + 0.65f * (index.toFloat() / totalTasks)
                     _appState.value = AppState.Running(trackingId = trackingId, progress = currentProgress)
 
-                    val resultObj = JSONObject()
-                    val stepTarget = "${item.target} (${index + 1}/$totalTasks)"
-                    when (item.type) {
-                        "ping" -> {
-                            _statusMessage.value = lContext.getString(R.string.step_ping, stepTarget)
-                            val pingRes = NetworkEngine.executePing(item.target, timeoutMs)
-                            resultObj.put("task", pingRes.task)
-                            resultObj.put("status", pingRes.status)
-                            resultObj.put("raw_log", pingRes.raw_log)
+                    when (item) {
+                        is DiagnosisTaskItem.Standard -> {
+                            val stepTarget = "${item.target} (${index + 1}/$totalTasks)"
+                            val res = when (item.type) {
+                                "ping" -> {
+                                    _statusMessage.value = lContext.getString(R.string.step_ping, stepTarget)
+                                    NetworkEngine.executePing(item.target, timeoutMs)
+                                }
+                                "dns" -> {
+                                    _statusMessage.value = lContext.getString(R.string.step_dns, stepTarget)
+                                    NetworkEngine.executeDns(item.target)
+                                }
+                                "http" -> {
+                                    _statusMessage.value = lContext.getString(R.string.step_http, stepTarget)
+                                    NetworkEngine.executeHttp(item.target, timeoutMs)
+                                }
+                                "tcp" -> {
+                                    _statusMessage.value = lContext.getString(R.string.step_tcp, stepTarget)
+                                    NetworkEngine.executeTcp(item.target, timeoutMs)
+                                }
+                                "speed", "download" -> {
+                                    _statusMessage.value = lContext.getString(R.string.step_speed, stepTarget)
+                                    NetworkEngine.executeSpeedTest(item.target, timeoutMs)
+                                }
+                                else -> {
+                                    _statusMessage.value = lContext.getString(R.string.step_ping, stepTarget)
+                                    NetworkEngine.executePing(item.target, timeoutMs)
+                                }
+                            }
+                            executedResults.add(res)
                         }
-                        "dns" -> {
-                            _statusMessage.value = lContext.getString(R.string.step_dns, stepTarget)
-                            val dnsRes = NetworkEngine.executeDns(item.target)
-                            resultObj.put("task", dnsRes.task)
-                            resultObj.put("status", dnsRes.status)
-                            resultObj.put("raw_log", dnsRes.raw_log)
+                        is DiagnosisTaskItem.Doh -> {
+                            val stepTarget = "${item.domain} (${index + 1}/$totalTasks)"
+                            _statusMessage.value = lContext.getString(R.string.step_doh, stepTarget)
+                            val dohRes = NetworkEngine.executeDoh(item.serverUrl, item.domain, timeoutMs)
+                            executedResults.add(dohRes)
                         }
-                        "http" -> {
-                            _statusMessage.value = lContext.getString(R.string.step_http, stepTarget)
-                            val httpRes = NetworkEngine.executeHttp(item.target, timeoutMs)
-                            resultObj.put("task", httpRes.task)
-                            resultObj.put("status", httpRes.status)
-                            resultObj.put("raw_log", httpRes.raw_log)
-                        }
-                        "tcp" -> {
-                            _statusMessage.value = lContext.getString(R.string.step_tcp, stepTarget)
-                            val tcpRes = NetworkEngine.executeTcp(item.target, timeoutMs)
-                            resultObj.put("task", tcpRes.task)
-                            resultObj.put("status", tcpRes.status)
-                            resultObj.put("raw_log", tcpRes.raw_log)
-                        }
-                        "speed", "download" -> {
-                            _statusMessage.value = lContext.getString(R.string.step_speed, stepTarget)
-                            val speedRes = NetworkEngine.executeSpeedTest(item.target, timeoutMs)
-                            resultObj.put("task", speedRes.task)
-                            resultObj.put("status", speedRes.status)
-                            resultObj.put("raw_log", speedRes.raw_log)
-                        }
-                        else -> {
-                            _statusMessage.value = lContext.getString(R.string.step_ping, stepTarget)
-                            val pingRes = NetworkEngine.executePing(item.target, timeoutMs)
-                            resultObj.put("task", pingRes.task)
-                            resultObj.put("status", pingRes.status)
-                            resultObj.put("raw_log", pingRes.raw_log)
+                        is DiagnosisTaskItem.Proxy -> {
+                            val stepTarget = "${item.urls.firstOrNull() ?: ""} (${index + 1}/$totalTasks)"
+                            _statusMessage.value = lContext.getString(R.string.step_proxy, stepTarget)
+                            val proxyResults = NetworkEngine.executeProxyTest(
+                                context = getApplication(),
+                                urls = item.urls,
+                                modes = item.modes,
+                                dohServers = item.dohServers,
+                                dnsServers = item.dnsServers,
+                                hostsMapping = item.hostsMapping,
+                                requestedPort = item.port,
+                                timeoutMs = timeoutMs
+                            )
+                            executedResults.addAll(proxyResults)
                         }
                     }
+                }
+
+                // 4.5 智能诊断分析与解决方案生成
+                _statusMessage.value = lContext.getString(R.string.step_analyzing)
+                val analysis = NetworkDiagnosticAnalyzer.analyze(executedResults)
+                _analysisReport.value = analysis
+
+                // 序列化所有执行结果
+                for (res in executedResults) {
+                    val resultObj = JSONObject()
+                    resultObj.put("task", res.task)
+                    resultObj.put("status", res.status)
+                    resultObj.put("raw_log", res.raw_log)
+                    resultObj.put("duration_ms", res.durationMs)
                     resultsList.put(resultObj)
                 }
+
+                // 注入智能诊断结论与解决方案条目
+                val analysisObj = JSONObject()
+                analysisObj.put("task", "analysis|smart_solution")
+                analysisObj.put("status", if (analysis.status == "PASS") "success" else if (analysis.status == "WARN") "warning" else "failed")
+                analysisObj.put("summary", analysis.summary)
+                analysisObj.put("issues", JSONArray(analysis.issues))
+                analysisObj.put("solutions", JSONArray(analysis.solutions))
+                analysisObj.put("raw_log", analysis.formattedReport)
+                resultsList.put(analysisObj)
 
                 // 5. 组装客户端上报的完整 JSON
                 val payloadJson = JSONObject()

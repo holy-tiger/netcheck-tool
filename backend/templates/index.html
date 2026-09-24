@@ -98,8 +98,7 @@
                 id="targetHostsInput" 
                 rows="3" 
                 placeholder="例如: 8.8.8.8, 1.1.1.1, google.com"
-                class="w-full text-sm font-mono p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                required>8.8.8.8, 1.1.1.1, baidu.com</textarea>
+                class="w-full text-sm font-mono p-3 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">8.8.8.8, 1.1.1.1, baidu.com</textarea>
             </div>
 
             <!-- Historical target chips -->
@@ -126,7 +125,15 @@
                 <input type="checkbox" id="optTcp" checked class="w-4 h-4 text-blue-600 rounded mr-2">
                 <span><i class="fa-solid fa-network-wired mr-1 text-slate-400"></i> TCP 端口探测</span>
               </label>
-              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 sm:col-span-2">
+              <label class="flex items-center p-2.5 border border-purple-200 rounded-xl bg-purple-50/60 hover:bg-purple-100/60 cursor-pointer text-xs font-semibold text-purple-900 transition-all">
+                <input type="checkbox" id="optDoh" onchange="toggleDohSection()" class="w-4 h-4 text-purple-600 rounded mr-2">
+                <span><i class="fa-solid fa-shield-halved mr-1 text-purple-600"></i> DoH 检测 (加密DNS)</span>
+              </label>
+              <label class="flex items-center p-2.5 border border-indigo-200 rounded-xl bg-indigo-50/60 hover:bg-indigo-100/60 cursor-pointer text-xs font-semibold text-indigo-900 transition-all">
+                <input type="checkbox" id="optProxy" onchange="toggleProxySection()" class="w-4 h-4 text-indigo-600 rounded mr-2">
+                <span><i class="fa-solid fa-server mr-1 text-indigo-600"></i> 内置代理测试</span>
+              </label>
+              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 sm:col-span-3">
                 <input type="checkbox" id="optSpeed" class="w-4 h-4 text-blue-600 rounded mr-2">
                 <span><i class="fa-solid fa-gauge-high mr-1 text-blue-500"></i> 下载网速测速 (Speed Test)</span>
               </label>
@@ -143,6 +150,141 @@
                 placeholder="例如: https://speed.cloudflare.com/__down?bytes=10000000"
                 class="w-full text-xs font-mono px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+
+            <!-- DoH Dedicated Input Section (Hidden by default, shown when optDoh is checked) -->
+            <div id="dohConfigPanel" class="hidden p-4 rounded-xl border border-purple-200 bg-purple-50/40 space-y-3 transition-all">
+              <div class="flex items-center justify-between border-b border-purple-200/70 pb-2">
+                <span class="text-xs font-bold text-purple-900 flex items-center">
+                  <i class="fa-solid fa-shield-halved text-purple-600 mr-1.5"></i> DoH (DNS over HTTPS) 专项检测配置
+                </span>
+                <span class="text-[10px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded">独立输入</span>
+              </div>
+              
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  DoH 服务器列表 (支持多个，逗号或换行分隔)
+                </label>
+                <textarea 
+                  id="dohServersInput" 
+                  rows="2" 
+                  placeholder="例如: https://cloudflare-dns.com/dns-query, https://dns.google/dns-query"
+                  class="w-full text-xs font-mono p-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">https://cloudflare-dns.com/dns-query, https://dns.google/dns-query</textarea>
+                <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  <span class="text-[10px] text-slate-400">快速填入：</span>
+                  <button type="button" onclick="addDohServer('https://cloudflare-dns.com/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-1.5 py-0.5 rounded">Cloudflare</button>
+                  <button type="button" onclick="addDohServer('https://dns.google/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-1.5 py-0.5 rounded">Google</button>
+                  <button type="button" onclick="addDohServer('https://dns.alidns.com/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-1.5 py-0.5 rounded">阿里AliDNS</button>
+                  <button type="button" onclick="addDohServer('https://doh.pub/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-1.5 py-0.5 rounded">腾讯DNSPod</button>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  待检测的域名 (支持多个，逗号或换行分隔，与常规测试目标独立)
+                </label>
+                <textarea 
+                  id="dohDomainsInput" 
+                  rows="2" 
+                  placeholder="例如: google.com, cloudflare.com, github.com"
+                  class="w-full text-xs font-mono p-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">google.com, cloudflare.com</textarea>
+              </div>
+            </div>
+
+            <!-- Built-in Proxy Server Dedicated Input Section (Hidden by default, shown when optProxy is checked) -->
+            <div id="proxyConfigPanel" class="hidden p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3.5 transition-all">
+              <div class="flex items-center justify-between border-b border-indigo-200/70 pb-2">
+                <span class="text-xs font-bold text-indigo-900 flex items-center">
+                  <i class="fa-solid fa-server text-indigo-600 mr-1.5"></i> 内置代理服务器测试 (Local Proxy &amp; Resolver)
+                </span>
+                <span class="text-[10px] bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded">独立测试链路</span>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  访问的目标 URL (支持多个，逗号或换行分隔)
+                </label>
+                <input 
+                  type="text" 
+                  id="proxyUrlsInput" 
+                  value="https://example.com" 
+                  placeholder="例如: https://example.com, https://www.google.com"
+                  class="w-full text-xs font-mono p-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                  访问方式 (多选，可同时勾选)
+                </label>
+                <div class="flex items-center space-x-5">
+                  <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+                    <input type="checkbox" id="proxyModeNative" checked class="w-4 h-4 text-indigo-600 rounded mr-1.5">
+                    <span><i class="fa-solid fa-bolt text-indigo-500 mr-1"></i> 原生 Native 访问</span>
+                  </label>
+                  <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
+                    <input type="checkbox" id="proxyModeWebview" checked class="w-4 h-4 text-indigo-600 rounded mr-1.5">
+                    <span><i class="fa-brands fa-chrome text-blue-500 mr-1"></i> WebView 页面访问</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                    指定 DoH 服务器 (支持多个，逗号分隔)
+                  </label>
+                  <input 
+                    type="text" 
+                    id="proxyDohServersInput" 
+                    value="https://cloudflare-dns.com/dns-query"
+                    placeholder="https://cloudflare-dns.com/dns-query"
+                    class="w-full text-xs font-mono p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                    指定 DNS 服务器 (支持多个，逗号分隔)
+                  </label>
+                  <input 
+                    type="text" 
+                    id="proxyDnsServersInput" 
+                    placeholder="例如: 8.8.8.8, 1.1.1.1"
+                    class="w-full text-xs font-mono p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  指定 Host 和 IP 静态映射 (如 example.com=93.184.216.34，换行或逗号分隔)
+                </label>
+                <textarea 
+                  id="proxyHostsMappingInput" 
+                  rows="2" 
+                  placeholder="例如: example.com=93.184.216.34, test.org=1.2.3.4"
+                  class="w-full text-xs font-mono p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">example.com=93.184.216.34</textarea>
+                <p class="text-[10px] text-slate-400 mt-0.5">作为特定域名的强制解析映射，用于诊断节点劫持或定向测试</p>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  代理服务器本地端口 (设为 0 自动规避端口冲突)
+                </label>
+                <div class="flex items-center space-x-2">
+                  <input 
+                    type="number" 
+                    id="proxyPortInput" 
+                    value="0" 
+                    placeholder="0"
+                    class="w-24 text-xs font-mono p-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <span class="text-[11px] text-emerald-700 flex items-center">
+                    <i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>
+                    设为 0 时系统自动探测可用端口，彻底规避端口冲突
+                  </span>
+                </div>
+              </div>
             </div>
 
             <!-- Config Advanced -->
@@ -354,6 +496,26 @@
       }
     }
 
+    function toggleDohSection() {
+      const panel = document.getElementById('dohConfigPanel');
+      panel.classList.toggle('hidden', !document.getElementById('optDoh').checked);
+    }
+
+    function toggleProxySection() {
+      const panel = document.getElementById('proxyConfigPanel');
+      panel.classList.toggle('hidden', !document.getElementById('optProxy').checked);
+    }
+
+    function addDohServer(server) {
+      const input = document.getElementById('dohServersInput');
+      const current = input.value.trim();
+      const list = current.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      if (!list.includes(server)) {
+        list.push(server);
+        input.value = list.join(', ');
+      }
+    }
+
     async function handleGenerate(e) {
       e.preventDefault();
       const hostsStr = document.getElementById('targetHostsInput').value;
@@ -367,8 +529,32 @@
       const timeout_ms = parseInt(document.getElementById('optTimeout').value) || 20000;
       const report_url = document.getElementById('optReportUrl').value.trim() || (window.location.origin + '/api/reports');
 
-      if (targets.length === 0) {
-        alert("请输入至少一个测试目标主机！");
+      const doh_enabled = document.getElementById('optDoh').checked;
+      const doh_servers = document.getElementById('dohServersInput').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      const doh_domains = document.getElementById('dohDomainsInput').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
+      const proxy_test_enabled = document.getElementById('optProxy').checked;
+      const proxy_urls = document.getElementById('proxyUrlsInput').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      const proxy_modes = [];
+      if (document.getElementById('proxyModeNative').checked) proxy_modes.push('native');
+      if (document.getElementById('proxyModeWebview').checked) proxy_modes.push('webview');
+      const proxy_doh_servers = document.getElementById('proxyDohServersInput').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      const proxy_dns_servers = document.getElementById('proxyDnsServersInput').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
+      const proxy_hosts_mapping = {};
+      const hostLines = document.getElementById('proxyHostsMappingInput').value.split(/[\n,]+/);
+      hostLines.forEach(l => {
+        const parts = l.split(/[=:]/);
+        if (parts.length >= 2) {
+          const h = parts[0].trim();
+          const ip = parts[1].trim();
+          if (h && ip) proxy_hosts_mapping[h] = ip;
+        }
+      });
+      const proxy_port = parseInt(document.getElementById('proxyPortInput').value) || 0;
+
+      if (targets.length === 0 && (!doh_enabled || doh_domains.length === 0) && (!proxy_test_enabled || proxy_urls.length === 0)) {
+        alert("请输入至少一个测试目标主机，或者启用 DoH / 代理测试并填写目标域名或URL！");
         return;
       }
 
@@ -385,7 +571,17 @@
             speed_enabled,
             speed_url,
             timeout_ms,
-            report_url
+            report_url,
+            doh_enabled,
+            doh_servers,
+            doh_domains,
+            proxy_test_enabled,
+            proxy_urls,
+            proxy_modes,
+            proxy_doh_servers,
+            proxy_dns_servers,
+            proxy_hosts_mapping,
+            proxy_port
           })
         });
 
@@ -536,12 +732,52 @@
         return;
       }
 
-      tasksContainer.innerHTML = results.map(t => {
+      // Check if there is an analysis report
+      const analysisTask = results.find(t => t.task === 'analysis|smart_solution');
+      let analysisHtml = '';
+      if (analysisTask) {
+        let parsed = null;
+        try {
+          parsed = JSON.parse(analysisTask.raw_log);
+        } catch (e) {}
+
+        if (parsed) {
+          const statusBg = parsed.status === 'PASS' ? 'bg-emerald-50 border-emerald-300' : (parsed.status === 'WARN' ? 'bg-amber-50 border-amber-300' : 'bg-rose-50 border-rose-300');
+          const statusText = parsed.status === 'PASS' ? 'text-emerald-800' : (parsed.status === 'WARN' ? 'text-amber-800' : 'text-rose-800');
+          const badgeBg = parsed.status === 'PASS' ? 'bg-emerald-100 text-emerald-800' : (parsed.status === 'WARN' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800');
+
+          const issuesHtml = (parsed.issues || []).map(i => `<li class="text-rose-700 text-xs flex items-start"><i class="fa-solid fa-triangle-exclamation mr-1.5 mt-0.5 text-rose-500 shrink-0"></i><span>${i}</span></li>`).join('');
+          const solutionsHtml = (parsed.solutions || []).map((s, idx) => `<li class="text-slate-800 text-xs flex items-start"><span class="bg-indigo-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] mr-2 shrink-0 mt-0.5">${idx+1}</span><span>${s}</span></li>`).join('');
+
+          analysisHtml = `
+            <div class="border-2 ${statusBg} rounded-2xl p-4 mb-4 shadow-sm">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-wand-magic-sparkles text-indigo-600 text-sm"></i>
+                  <span class="font-bold text-sm text-slate-900">智能诊断结论与解决方案建议</span>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeBg}">
+                  ${parsed.status === 'PASS' ? '✅ 检测正常 PASS' : (parsed.status === 'WARN' ? '⚠️ 存在隐患 WARNING' : '❌ 发现故障 CRITICAL')}
+                </span>
+              </div>
+              <p class="text-xs ${statusText} font-medium leading-relaxed bg-white/70 p-2.5 rounded-xl border border-slate-200/60 mb-3">${parsed.summary || ''}</p>
+              ${parsed.issues && parsed.issues.length ? `<div class="mb-3"><div class="text-[11px] font-bold text-rose-800 mb-1.5 flex items-center"><i class="fa-solid fa-circle-exclamation mr-1 text-rose-600"></i> 检出的异常问题:</div><ul class="space-y-1.5 pl-1">${issuesHtml}</ul></div>` : ''}
+              ${parsed.solutions && parsed.solutions.length ? `<div><div class="text-[11px] font-bold text-emerald-800 mb-1.5 flex items-center"><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> 客服与工程师排障方案:</div><ul class="space-y-1.5 pl-1">${solutionsHtml}</ul></div>` : ''}
+            </div>
+          `;
+        }
+      }
+
+      const tasksListHtml = results.filter(t => t.task !== 'analysis|smart_solution').map(t => {
         const isSuccess = t.status === 'success';
+        const isDoh = t.task.startsWith('doh|');
+        const isProxy = t.task.startsWith('proxy|');
         return `
           <div class="border ${isSuccess ? 'border-slate-200 bg-white' : 'border-rose-200 bg-rose-50/30'} rounded-xl p-3.5 shadow-sm">
             <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center space-x-2">
+              <div class="flex items-center space-x-1.5">
+                ${isDoh ? '<span class="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-shield-halved mr-0.5"></i>DoH</span>' : ''}
+                ${isProxy ? '<span class="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded text-[10px] font-bold"><i class="fa-solid fa-server mr-0.5"></i>Proxy</span>' : ''}
                 <span class="font-mono font-semibold text-xs text-slate-800">${t.task || 'Task'}</span>
               </div>
               <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${isSuccess ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
@@ -552,6 +788,8 @@
           </div>
         `;
       }).join('');
+
+      tasksContainer.innerHTML = analysisHtml + tasksListHtml;
     }
 
     function closeDetailCard() {

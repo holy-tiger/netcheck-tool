@@ -3,6 +3,7 @@ package com.example.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import com.example.core.AnalysisReport
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
@@ -30,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
@@ -117,6 +119,7 @@ fun MainScreen(
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
     val recentHistory by viewModel.recentHistory.collectAsStateWithLifecycle()
     val currentLanguage by viewModel.currentLanguage.collectAsStateWithLifecycle()
+    val analysisReport by viewModel.analysisReport.collectAsStateWithLifecycle()
 
     var inputCommand by remember {
         mutableStateOf("")
@@ -307,24 +310,34 @@ fun MainScreen(
                     }
 
                     is AppState.Success -> {
-                        SuccessResultCard(
-                            trackingId = trackingId,
-                            onNewTest = { viewModel.resetToIdle() }
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            SuccessResultCard(
+                                trackingId = trackingId,
+                                onNewTest = { viewModel.resetToIdle() }
+                            )
+                            analysisReport?.let { report ->
+                                AnalysisReportCard(analysis = report)
+                            }
+                        }
                     }
 
                     is AppState.Failed -> {
-                        FailedResultCard(
-                            trackingId = trackingId,
-                            onRetry = { viewModel.resetToIdle() },
-                            onDownloadFile = {
-                                viewModel.saveReportToFile(
-                                    context,
-                                    viewModel.lastGeneratedJson.value,
-                                    trackingId
-                                )
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            FailedResultCard(
+                                trackingId = trackingId,
+                                onRetry = { viewModel.resetToIdle() },
+                                onDownloadFile = {
+                                    viewModel.saveReportToFile(
+                                        context,
+                                        viewModel.lastGeneratedJson.value,
+                                        trackingId
+                                    )
+                                }
+                            )
+                            analysisReport?.let { report ->
+                                AnalysisReportCard(analysis = report)
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -1088,6 +1101,224 @@ fun FailedResultCard(
                 Text(
                     text = stringResource(R.string.return_to_input),
                     style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Intelligent Diagnosis & Solutions Card
+ */
+@Composable
+fun AnalysisReportCard(analysis: com.example.core.AnalysisReport) {
+    val context = LocalContext.current
+
+    val statusColor = when (analysis.status) {
+        "PASS" -> Color(0xFF10B981)
+        "WARN" -> Color(0xFFF59E0B)
+        else -> Color(0xFFEF4444)
+    }
+
+    val cardBg = when (analysis.status) {
+        "PASS" -> Color(0xFF10B981).copy(alpha = 0.08f)
+        "WARN" -> Color(0xFFF59E0B).copy(alpha = 0.08f)
+        else -> Color(0xFFEF4444).copy(alpha = 0.08f)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            // Header with Icon, Title, and Status Chip
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = statusColor.copy(alpha = 0.15f),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = statusColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(R.string.analysis_card_title),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = statusColor.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = when (analysis.status) {
+                            "PASS" -> "PASS"
+                            "WARN" -> "WARNING"
+                            else -> "CRITICAL"
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = statusColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Diagnostic Summary
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = cardBg,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = analysis.summary,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 20.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+
+            // Detected Issues
+            if (analysis.issues.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Error,
+                        contentDescription = null,
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.analysis_issue_title),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFFEF4444)
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    analysis.issues.forEach { issue ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "• ",
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFFEF4444)
+                            )
+                            Text(
+                                text = issue,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Recommended Solutions
+            if (analysis.solutions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.analysis_solution_title),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color(0xFF10B981)
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    analysis.solutions.forEachIndexed { idx, sol ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "${idx + 1}",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = sol,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Copy Diagnostic Report Button
+            OutlinedButton(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("NetCheck Analysis", analysis.formattedReport))
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.copied_log),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                },
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = stringResource(R.string.copy_button) + " " + stringResource(R.string.analysis_card_title),
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
         }

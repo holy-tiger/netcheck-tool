@@ -189,8 +189,27 @@ const server = http.createServer(async (req, res) => {
       const payload = await parseBody(req);
       const rawTargets = Array.isArray(payload.targets) ? payload.targets : [];
       const targets = rawTargets.map(t => String(t).trim()).filter(Boolean);
-      if (targets.length === 0) {
-        return sendJson(res, 400, { detail: 'At least one target host is required' });
+
+      const dohEnabled = Boolean(payload.doh_enabled);
+      const rawDohServers = Array.isArray(payload.doh_servers) ? payload.doh_servers : [];
+      const dohServers = rawDohServers.map(s => String(s).trim()).filter(Boolean);
+      const rawDohDomains = Array.isArray(payload.doh_domains) ? payload.doh_domains : [];
+      const dohDomains = rawDohDomains.map(d => String(d).trim()).filter(Boolean);
+
+      const proxyTestEnabled = Boolean(payload.proxy_test_enabled);
+      const rawProxyUrls = Array.isArray(payload.proxy_urls) ? payload.proxy_urls : [];
+      const proxyUrls = rawProxyUrls.map(u => String(u).trim()).filter(Boolean);
+      const rawProxyModes = Array.isArray(payload.proxy_modes) ? payload.proxy_modes : [];
+      const proxyModes = rawProxyModes.map(m => String(m).trim().toLowerCase()).filter(Boolean);
+      const rawProxyDoh = Array.isArray(payload.proxy_doh_servers) ? payload.proxy_doh_servers : [];
+      const proxyDohServers = rawProxyDoh.map(s => String(s).trim()).filter(Boolean);
+      const rawProxyDns = Array.isArray(payload.proxy_dns_servers) ? payload.proxy_dns_servers : [];
+      const proxyDnsServers = rawProxyDns.map(s => String(s).trim()).filter(Boolean);
+      const proxyHostsMapping = (payload.proxy_hosts_mapping && typeof payload.proxy_hosts_mapping === 'object') ? payload.proxy_hosts_mapping : {};
+      const proxyPort = parseInt(payload.proxy_port, 10) || 0;
+
+      if (targets.length === 0 && !(dohEnabled && dohDomains.length > 0) && !(proxyTestEnabled && proxyUrls.length > 0)) {
+        return sendJson(res, 400, { detail: 'At least one target host, DoH domain, or proxy URL is required' });
       }
 
       let reportUrl = payload.report_url;
@@ -200,24 +219,56 @@ const server = http.createServer(async (req, res) => {
       }
 
       const tasks = [];
-      if (payload.ping_enabled !== false) {
-        tasks.push({ type: 'ping', targets });
+      if (targets.length > 0) {
+        if (payload.ping_enabled !== false) {
+          tasks.push({ type: 'ping', targets });
+        }
+        if (payload.dns_enabled) {
+          tasks.push({ type: 'dns', targets });
+        }
+        if (payload.http_enabled) {
+          tasks.push({ type: 'http', targets });
+        }
+        if (payload.tcp_enabled) {
+          tasks.push({ type: 'tcp', targets });
+        }
+        if (payload.speed_enabled) {
+          const speedTarget = payload.speed_url || 'https://speed.cloudflare.com/__down?bytes=5000000';
+          tasks.push({ type: 'speed', targets: [speedTarget] });
+        }
       }
-      if (payload.dns_enabled) {
-        tasks.push({ type: 'dns', targets });
+
+      // DoH task
+      if (dohEnabled) {
+        const finalDohServers = dohServers.length > 0 ? dohServers : [
+          'https://cloudflare-dns.com/dns-query',
+          'https://dns.google/dns-query'
+        ];
+        const finalDohDomains = dohDomains.length > 0 ? dohDomains : (targets.length > 0 ? targets : ['google.com', 'cloudflare.com']);
+        tasks.push({
+          type: 'doh',
+          servers: finalDohServers,
+          domains: finalDohDomains
+        });
       }
-      if (payload.http_enabled) {
-        tasks.push({ type: 'http', targets });
+
+      // Proxy test task
+      if (proxyTestEnabled) {
+        const finalUrls = proxyUrls.length > 0 ? proxyUrls : ['https://example.com'];
+        const finalModes = proxyModes.length > 0 ? proxyModes : ['native', 'webview'];
+        tasks.push({
+          type: 'proxy_test',
+          urls: finalUrls,
+          modes: finalModes,
+          doh_servers: proxyDohServers,
+          dns_servers: proxyDnsServers,
+          hosts_mapping: proxyHostsMapping,
+          proxy_port: proxyPort
+        });
       }
-      if (payload.tcp_enabled) {
-        tasks.push({ type: 'tcp', targets });
-      }
-      if (payload.speed_enabled) {
-        const speedTarget = payload.speed_url || 'https://speed.cloudflare.com/__down?bytes=5000000';
-        tasks.push({ type: 'speed', targets: [speedTarget] });
-      }
+
       if (tasks.length === 0) {
-        tasks.push({ type: 'ping', targets });
+        tasks.push({ type: 'ping', targets: targets.length > 0 ? targets : ['8.8.8.8'] });
       }
 
       const commandObj = {
@@ -237,8 +288,12 @@ const server = http.createServer(async (req, res) => {
             last_used_at = CURRENT_TIMESTAMP,
             use_count = use_count + 1
       `);
-      for (const host of targets) {
-        stmt.run(host);
+      const allHosts = new Set(targets);
+      if (dohEnabled) {
+        dohDomains.forEach(d => allHosts.add(d));
+      }
+      for (const host of allHosts) {
+        if (host) stmt.run(host);
       }
 
       return sendJson(res, 200, {
