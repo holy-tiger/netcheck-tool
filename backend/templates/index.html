@@ -419,9 +419,16 @@
                 <i class="fa-solid fa-file-waveform"></i>
               </div>
               <div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-xs text-slate-500">Tracking ID:</span>
-                  <span id="detailTrackingId" class="font-mono text-base font-bold text-blue-700"></span>
+                <div class="flex items-center space-x-2.5 flex-wrap gap-y-1">
+                  <div class="flex items-center space-x-2">
+                    <span class="text-xs text-slate-500">Tracking ID:</span>
+                    <span id="detailTrackingId" class="font-mono text-base font-bold text-blue-700"></span>
+                  </div>
+                  <div id="detailRemoteAddrBadge" class="hidden items-center px-2.5 py-0.5 rounded-lg text-xs font-mono font-medium bg-blue-50 text-blue-800 border border-blue-200">
+                    <i class="fa-solid fa-globe text-blue-600 mr-1.5 text-[11px]"></i>
+                    <span class="text-slate-500 font-sans text-[11px] mr-1">Remote Addr:</span>
+                    <span id="detailRemoteAddr" class="font-bold text-blue-900"></span>
+                  </div>
                 </div>
                 <div id="detailCreatedAt" class="text-[11px] text-slate-400"></div>
               </div>
@@ -449,6 +456,7 @@
               <ul class="text-xs space-y-1 text-slate-600">
                 <li><span class="text-slate-400">类型：</span><span id="detailNetType" class="font-medium"></span></li>
                 <li><span class="text-slate-400">本地IP：</span><span id="detailLocalIp" class="font-mono"></span></li>
+                <li><span class="text-slate-400">上报IP (Remote Addr)：</span><span id="detailNetRemoteIp" class="font-mono font-medium text-slate-800"></span></li>
                 <li><span class="text-slate-400">代理/VPN：</span><span id="detailVpn" class="font-medium"></span></li>
               </ul>
             </div>
@@ -732,8 +740,9 @@
 
         return `
           <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="showReportDetailByTrackingId('${item.tracking_id}')">
-            <td class="py-3 px-4 font-mono font-bold text-blue-700">
-              ${item.tracking_id}
+            <td class="py-3 px-4 font-mono">
+              <div class="font-bold text-blue-700">${item.tracking_id}</div>
+              ${item.remote_addr ? `<div class="text-[11px] text-slate-500 font-normal flex items-center mt-0.5" title="Remote Addr: ${item.remote_addr}"><i class="fa-solid fa-globe text-blue-500 mr-1 text-[10px]"></i>${item.remote_addr}</div>` : ''}
             </td>
             <td class="py-3 px-3">
               <div class="font-medium text-slate-800">${dev.model || 'Unknown'}</div>
@@ -875,6 +884,17 @@
       document.getElementById('detailTrackingId').innerText = report.tracking_id;
       document.getElementById('detailCreatedAt').innerText = '上报时间: ' + (report.created_at || '刚刚');
 
+      const remoteAddr = report.remote_addr || '';
+      const remoteAddrBadge = document.getElementById('detailRemoteAddrBadge');
+      if (remoteAddr) {
+        document.getElementById('detailRemoteAddr').innerText = remoteAddr;
+        remoteAddrBadge.classList.remove('hidden');
+        remoteAddrBadge.classList.add('inline-flex');
+      } else {
+        remoteAddrBadge.classList.add('hidden');
+        remoteAddrBadge.classList.remove('inline-flex');
+      }
+
       const dev = report.device_info || {};
       document.getElementById('detailModel').innerText = dev.model || 'Unknown';
       document.getElementById('detailOs').innerText = dev.os || 'Unknown';
@@ -882,6 +902,10 @@
       const net = report.network_env || {};
       document.getElementById('detailNetType').innerText = net.type || '未知';
       document.getElementById('detailLocalIp').innerText = net.local_ip || '未知';
+      const netRemoteIpEl = document.getElementById('detailNetRemoteIp');
+      if (netRemoteIpEl) {
+        netRemoteIpEl.innerText = remoteAddr || '未知';
+      }
       document.getElementById('detailVpn').innerText = net.is_vpn ? '⚠️ 开启了代理/VPN' : '未开启 (直接连网)';
 
       const tasksContainer = document.getElementById('detailTasksList');

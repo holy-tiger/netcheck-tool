@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS diagnostic_reports (
     device_info TEXT NOT NULL,
     network_env TEXT NOT NULL,
     task_results TEXT NOT NULL,
+    remote_addr TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_tracking_id ON diagnostic_reports(tracking_id);
@@ -26,6 +27,10 @@ CREATE INDEX IF NOT EXISTS idx_tracking_id ON diagnostic_reports(tracking_id);
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(INIT_SQL)
+        try:
+            await db.execute("ALTER TABLE diagnostic_reports ADD COLUMN remote_addr TEXT")
+        except Exception:
+            pass
         await db.commit()
 
 async def get_db_connection():

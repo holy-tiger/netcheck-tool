@@ -13,6 +13,7 @@ class ReportPayloadSchema(BaseModel):
     device_info: dict[str, Any]    # {"os": "...", "model": "..."}
     network_env: dict[str, Any]    # {"type": "WiFi", "local_ip": "..."}
     results: list[dict[str, Any]]  # [{"task": "ping|x", "status": "success", "raw_log": "..."}]
+    remote_addr: str | None = None
 
 class GenerateCommandRequest(BaseModel):
     report_url: str | None = None

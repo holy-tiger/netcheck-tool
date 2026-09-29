@@ -1,36 +1,55 @@
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from ..database import get_db_connection
 from ..models import ReportPayloadSchema
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
+def get_client_remote_addr(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        ip = forwarded_for.split(",")[0].strip()
+        if ip:
+            return ip.replace("::ffff:", "")
+
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip and real_ip.strip():
+        return real_ip.strip().replace("::ffff:", "")
+
+    if request.client and request.client.host:
+        return request.client.host.replace("::ffff:", "")
+
+    return ""
+
 @router.post("")
 @router.post("/")
-async def submit_report(payload: ReportPayloadSchema):
+async def submit_report(payload: ReportPayloadSchema, request: Request):
     db = await get_db_connection()
     try:
         device_info_str = json.dumps(payload.device_info, ensure_ascii=False)
         network_env_str = json.dumps(payload.network_env, ensure_ascii=False)
         task_results_str = json.dumps(payload.results, ensure_ascii=False)
+        remote_addr = get_client_remote_addr(request) or payload.remote_addr or ""
 
         await db.execute(
             """
-            INSERT INTO diagnostic_reports (tracking_id, device_info, network_env, task_results, created_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO diagnostic_reports (tracking_id, device_info, network_env, task_results, remote_addr, created_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(tracking_id) DO UPDATE SET
                 device_info = excluded.device_info,
                 network_env = excluded.network_env,
                 task_results = excluded.task_results,
+                remote_addr = excluded.remote_addr,
                 created_at = CURRENT_TIMESTAMP
             """,
-            (payload.tracking_id, device_info_str, network_env_str, task_results_str)
+            (payload.tracking_id, device_info_str, network_env_str, task_results_str, remote_addr)
         )
         await db.commit()
         return {
             "status": "success",
             "message": "Report uploaded successfully",
-            "tracking_id": payload.tracking_id
+            "tracking_id": payload.tracking_id,
+            "remote_addr": remote_addr
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -44,7 +63,7 @@ async def list_reports(limit: int = 100, offset: int = 0):
     try:
         cursor = await db.execute(
             """
-            SELECT id, tracking_id, device_info, network_env, task_results, created_at
+            SELECT id, tracking_id, device_info, network_env, task_results, remote_addr, created_at
             FROM diagnostic_reports
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
@@ -73,6 +92,7 @@ async def list_reports(limit: int = 100, offset: int = 0):
                 "device_info": device_info,
                 "network_env": network_env,
                 "task_results": task_results,
+                "remote_addr": r["remote_addr"] or "",
                 "created_at": r["created_at"]
             })
         return result
@@ -85,7 +105,7 @@ async def get_report(tracking_id: str):
     try:
         cursor = await db.execute(
             """
-            SELECT id, tracking_id, device_info, network_env, task_results, created_at
+            SELECT id, tracking_id, device_info, network_env, task_results, remote_addr, created_at
             FROM diagnostic_reports
             WHERE tracking_id = ?
             """,
@@ -114,6 +134,7 @@ async def get_report(tracking_id: str):
             "device_info": device_info,
             "network_env": network_env,
             "task_results": task_results,
+            "remote_addr": row["remote_addr"] or "",
             "created_at": row["created_at"]
         }
     finally:

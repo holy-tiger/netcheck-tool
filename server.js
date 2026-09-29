@@ -24,10 +24,15 @@ db.exec(`
       device_info TEXT NOT NULL,
       network_env TEXT NOT NULL,
       task_results TEXT NOT NULL,
+      remote_addr TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
   CREATE INDEX IF NOT EXISTS idx_tracking_id ON diagnostic_reports(tracking_id);
 `);
+
+try {
+  db.exec('ALTER TABLE diagnostic_reports ADD COLUMN remote_addr TEXT;');
+} catch (_) {}
 
 function sendJson(res, statusCode, data) {
   const jsonStr = JSON.stringify(data);
@@ -107,21 +112,33 @@ const server = http.createServer(async (req, res) => {
         const networkEnvStr = JSON.stringify(payload.network_env || {});
         const taskResultsStr = JSON.stringify(payload.results || payload.task_results || []);
 
+        const forwarded = req.headers['x-forwarded-for'];
+        let remoteAddr = (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : '') ||
+                         (typeof req.headers['x-real-ip'] === 'string' ? req.headers['x-real-ip'].trim() : '') ||
+                         (req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : '') ||
+                         payload.remote_addr ||
+                         '';
+        if (typeof remoteAddr === 'string' && remoteAddr.startsWith('::ffff:')) {
+          remoteAddr = remoteAddr.replace(/^::ffff:/, '');
+        }
+
         const stmt = db.prepare(`
-          INSERT INTO diagnostic_reports (tracking_id, device_info, network_env, task_results, created_at)
-          VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+          INSERT INTO diagnostic_reports (tracking_id, device_info, network_env, task_results, remote_addr, created_at)
+          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
           ON CONFLICT(tracking_id) DO UPDATE SET
               device_info = excluded.device_info,
               network_env = excluded.network_env,
               task_results = excluded.task_results,
+              remote_addr = excluded.remote_addr,
               created_at = CURRENT_TIMESTAMP
         `);
-        stmt.run(trackingId, deviceInfoStr, networkEnvStr, taskResultsStr);
+        stmt.run(trackingId, deviceInfoStr, networkEnvStr, taskResultsStr, remoteAddr);
 
         return sendJson(res, 200, {
           status: 'success',
           message: 'Report uploaded successfully',
-          tracking_id: trackingId
+          tracking_id: trackingId,
+          remote_addr: remoteAddr
         });
       }
 
@@ -129,7 +146,7 @@ const server = http.createServer(async (req, res) => {
         const limit = parseInt(parsedUrl.searchParams.get('limit') || '100', 10);
         const offset = parseInt(parsedUrl.searchParams.get('offset') || '0', 10);
         const stmt = db.prepare(`
-          SELECT id, tracking_id, device_info, network_env, task_results, created_at
+          SELECT id, tracking_id, device_info, network_env, task_results, remote_addr, created_at
           FROM diagnostic_reports
           ORDER BY created_at DESC
           LIMIT ? OFFSET ?
@@ -148,6 +165,7 @@ const server = http.createServer(async (req, res) => {
             device_info: deviceInfo,
             network_env: networkEnv,
             task_results: taskResults,
+            remote_addr: r.remote_addr || '',
             created_at: r.created_at
           };
         });
@@ -160,7 +178,7 @@ const server = http.createServer(async (req, res) => {
       const trackingId = decodeURIComponent(pathname.replace('/api/reports/', '')).trim().toUpperCase();
       if (trackingId && method === 'GET') {
         const stmt = db.prepare(`
-          SELECT id, tracking_id, device_info, network_env, task_results, created_at
+          SELECT id, tracking_id, device_info, network_env, task_results, remote_addr, created_at
           FROM diagnostic_reports
           WHERE tracking_id = ?
         `);
@@ -180,6 +198,7 @@ const server = http.createServer(async (req, res) => {
           device_info: deviceInfo,
           network_env: networkEnv,
           task_results: taskResults,
+          remote_addr: row.remote_addr || '',
           created_at: row.created_at
         });
       }
