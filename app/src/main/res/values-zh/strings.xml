@@ -51,7 +51,7 @@
     <string name="step_http">正在执行 HTTP 网页连通测试 (%1$s)...</string>
     <string name="step_tcp">正在执行 TCP 端口连通探测 (%1$s)...</string>
     <string name="step_speed">正在执行下载网速测试 (%1$s)...</string>
-    <string name="quick_check_button">一键网络全功能体检</string>
+    <string name="quick_check_button">一键网络体检</string>
     <string name="quick_check_chip">全网体检</string>
     <string name="clear_button">清空</string>
     <string name="clear_all_button">一键清空</string>

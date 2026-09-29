@@ -51,7 +51,7 @@
     <string name="step_http">جاري فحص اتصال الويب HTTP (%1$s)...</string>
     <string name="step_tcp">جاري فحص منفذ TCP (%1$s)...</string>
     <string name="step_speed">جاري اختبار سرعة التحميل (%1$s)...</string>
-    <string name="quick_check_button">فحص شامل للشبكة بنقرة واحدة</string>
+    <string name="quick_check_button">فحص الشبكة بنقرة واحدة</string>
     <string name="quick_check_chip">فحص سريع</string>
     <string name="clear_button">مسح</string>
     <string name="clear_all_button">مسح الكل</string>

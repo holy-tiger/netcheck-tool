@@ -393,6 +393,22 @@
               </tbody>
             </table>
           </div>
+
+          <!-- Pagination Bar -->
+          <div id="paginationContainer" class="px-6 py-3.5 bg-slate-50/80 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+            <div class="flex items-center gap-2">
+              <span id="paginationInfo" class="font-mono text-slate-600">显示第 1 - 10 条，共 0 条</span>
+              <div class="flex items-center ml-2 text-slate-500">
+                <span class="mr-1.5 text-[11px]">每页</span>
+                <select id="pageSizeSelect" onchange="changePageSize(this.value)" class="bg-white border border-slate-300 text-slate-700 text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-xs">
+                  <option value="10" selected>10 条</option>
+                  <option value="20">20 条</option>
+                  <option value="50">50 条</option>
+                </select>
+              </div>
+            </div>
+            <div id="paginationNav" class="flex items-center space-x-1.5"></div>
+          </div>
         </div>
 
         <!-- Selected Report Detail View Card -->
@@ -454,6 +470,8 @@
 
   <script>
     let activeReports = [];
+    let currentPage = 1;
+    let pageSize = 10;
 
     // Initialize on load
     window.addEventListener('DOMContentLoaded', () => {
@@ -641,10 +659,23 @@
       });
     }
 
+    function changePageSize(size) {
+      pageSize = parseInt(size, 10) || 10;
+      currentPage = 1;
+      renderReportsTable();
+    }
+
+    function goToPage(page) {
+      const totalPages = Math.ceil(activeReports.length / pageSize) || 1;
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      renderReportsTable();
+    }
+
     async function loadReports() {
       const tbody = document.getElementById('reportsTableBody');
       try {
-        const res = await fetch('/api/reports?limit=50');
+        const res = await fetch('/api/reports?limit=200');
         if (!res.ok) throw new Error("Fetch failed");
         const list = await res.json();
         activeReports = list;
@@ -659,46 +690,12 @@
               </td>
             </tr>
           `;
+          document.getElementById('paginationInfo').innerText = '暂无上报记录';
+          document.getElementById('paginationNav').innerHTML = '';
           return;
         }
 
-        tbody.innerHTML = list.map((item, idx) => {
-          const dev = item.device_info || {};
-          const net = item.network_env || {};
-          const results = item.task_results || [];
-          const successCount = results.filter(r => r.status === 'success').length;
-          const totalCount = results.length;
-          const isAllPass = totalCount > 0 && successCount === totalCount;
-
-          return `
-            <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="showReportDetailByIndex(${idx})">
-              <td class="py-3 px-4 font-mono font-bold text-blue-700">
-                ${item.tracking_id}
-              </td>
-              <td class="py-3 px-3">
-                <div class="font-medium text-slate-800">${dev.model || 'Unknown'}</div>
-                <div class="text-[11px] text-slate-400">${dev.os || ''}</div>
-              </td>
-              <td class="py-3 px-3">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
-                  ${net.type || 'Net'}
-                </span>
-                ${net.is_vpn ? '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">VPN</span>' : ''}
-              </td>
-              <td class="py-3 px-3">
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${isAllPass ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
-                  <span class="w-1.5 h-1.5 rounded-full ${isAllPass ? 'bg-emerald-500' : 'bg-rose-500'} mr-1.5"></span>
-                  ${successCount}/${totalCount} 成功
-                </span>
-              </td>
-              <td class="py-3 px-4 text-right">
-                <div class="text-[11px] text-slate-400 font-mono">${item.created_at || ''}</div>
-                <button class="text-blue-600 hover:text-blue-800 font-medium text-xs mt-0.5">查阅详情 &rarr;</button>
-              </td>
-            </tr>
-          `;
-        }).join('');
-
+        renderReportsTable();
       } catch (err) {
         tbody.innerHTML = `
           <tr>
@@ -707,7 +704,135 @@
             </td>
           </tr>
         `;
+        document.getElementById('paginationInfo').innerText = '加载失败';
+        document.getElementById('paginationNav').innerHTML = '';
       }
+    }
+
+    function renderReportsTable() {
+      const tbody = document.getElementById('reportsTableBody');
+      const total = activeReports.length;
+      if (total === 0) return;
+
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const endIdx = Math.min(startIdx + pageSize, total);
+      const pageItems = activeReports.slice(startIdx, endIdx);
+
+      tbody.innerHTML = pageItems.map((item) => {
+        const dev = item.device_info || {};
+        const net = item.network_env || {};
+        const results = item.task_results || [];
+        const successCount = results.filter(r => r.status === 'success').length;
+        const totalCount = results.length;
+        const isAllPass = totalCount > 0 && successCount === totalCount;
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="showReportDetailByTrackingId('${item.tracking_id}')">
+            <td class="py-3 px-4 font-mono font-bold text-blue-700">
+              ${item.tracking_id}
+            </td>
+            <td class="py-3 px-3">
+              <div class="font-medium text-slate-800">${dev.model || 'Unknown'}</div>
+              <div class="text-[11px] text-slate-400">${dev.os || ''}</div>
+            </td>
+            <td class="py-3 px-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                ${net.type || 'Net'}
+              </span>
+              ${net.is_vpn ? '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">VPN</span>' : ''}
+            </td>
+            <td class="py-3 px-3">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${isAllPass ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                <span class="w-1.5 h-1.5 rounded-full ${isAllPass ? 'bg-emerald-500' : 'bg-rose-500'} mr-1.5"></span>
+                ${successCount}/${totalCount} 成功
+              </span>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <div class="text-[11px] text-slate-400 font-mono">${item.created_at || ''}</div>
+              <button class="text-blue-600 hover:text-blue-800 font-medium text-xs mt-0.5">查阅详情 &rarr;</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('paginationInfo').innerText = `第 ${startIdx + 1} - ${endIdx} 条 / 共 ${total} 条 (第 ${currentPage}/${totalPages} 页)`;
+      renderPaginationNav(totalPages);
+    }
+
+    function renderPaginationNav(totalPages) {
+      const nav = document.getElementById('paginationNav');
+      if (totalPages <= 1) {
+        nav.innerHTML = `
+          <button disabled class="px-2.5 py-1 rounded border border-slate-200 text-slate-300 text-xs cursor-not-allowed">上一页</button>
+          <span class="w-7 h-7 flex items-center justify-center text-xs font-bold bg-indigo-600 text-white rounded shadow-xs">1</span>
+          <button disabled class="px-2.5 py-1 rounded border border-slate-200 text-slate-300 text-xs cursor-not-allowed">下一页</button>
+        `;
+        return;
+      }
+
+      let buttons = [];
+
+      // Prev Button
+      const isPrevDisabled = currentPage <= 1;
+      buttons.push(`
+        <button 
+          onclick="goToPage(${currentPage - 1})" 
+          ${isPrevDisabled ? 'disabled' : ''} 
+          class="px-2.5 py-1 rounded border border-slate-200 text-xs transition-colors flex items-center gap-1 ${isPrevDisabled ? 'text-slate-300 bg-slate-50 cursor-not-allowed' : 'text-slate-700 bg-white hover:bg-slate-100 hover:border-slate-300 shadow-xs'}">
+          <i class="fa-solid fa-chevron-left text-[10px]"></i> 上一页
+        </button>
+      `);
+
+      // Page numbers logic: show up to 7 buttons, or ellipses
+      let pageNumbers = [];
+      if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+      } else {
+        if (currentPage <= 4) {
+          pageNumbers = [1, 2, 3, 4, 5, '...', totalPages];
+        } else if (currentPage >= totalPages - 3) {
+          pageNumbers = [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        } else {
+          pageNumbers = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+        }
+      }
+
+      pageNumbers.forEach(p => {
+        if (p === '...') {
+          buttons.push(`<span class="px-1.5 py-1 text-xs text-slate-400">...</span>`);
+        } else if (p === currentPage) {
+          buttons.push(`
+            <button class="w-7 h-7 flex items-center justify-center rounded text-xs font-bold bg-indigo-600 text-white shadow-xs">
+              ${p}
+            </button>
+          `);
+        } else {
+          buttons.push(`
+            <button 
+              onclick="goToPage(${p})" 
+              class="w-7 h-7 flex items-center justify-center rounded border border-slate-200 text-xs text-slate-700 bg-white hover:bg-slate-100 hover:border-slate-300 shadow-xs transition-colors">
+              ${p}
+            </button>
+          `);
+        }
+      });
+
+      // Next Button
+      const isNextDisabled = currentPage >= totalPages;
+      buttons.push(`
+        <button 
+          onclick="goToPage(${currentPage + 1})" 
+          ${isNextDisabled ? 'disabled' : ''} 
+          class="px-2.5 py-1 rounded border border-slate-200 text-xs transition-colors flex items-center gap-1 ${isNextDisabled ? 'text-slate-300 bg-slate-50 cursor-not-allowed' : 'text-slate-700 bg-white hover:bg-slate-100 hover:border-slate-300 shadow-xs'}">
+          下一页 <i class="fa-solid fa-chevron-right text-[10px]"></i>
+        </button>
+      `);
+
+      nav.innerHTML = buttons.join('');
     }
 
     async function searchByTrackingId() {
@@ -726,6 +851,13 @@
         renderDetailView(report);
       } catch (e) {
         alert("查询失败，服务可能不可达");
+      }
+    }
+
+    function showReportDetailByTrackingId(trackingId) {
+      const item = activeReports.find(r => r.tracking_id === trackingId);
+      if (item) {
+        renderDetailView(item);
       }
     }
 

@@ -51,7 +51,7 @@
     <string name="step_http">Executing HTTP web connectivity probe (%1$s)...</string>
     <string name="step_tcp">Executing TCP port connectivity probe (%1$s)...</string>
     <string name="step_speed">Executing download speed test (%1$s)...</string>
-    <string name="quick_check_button">One-Tap Full Network Health Check</string>
+    <string name="quick_check_button">One-Tap Network Check</string>
     <string name="quick_check_chip">Quick Health Check</string>
     <string name="clear_button">Clear</string>
     <string name="clear_all_button">Clear All</string>

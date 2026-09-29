@@ -126,14 +126,15 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (method === 'GET') {
-        const limit = parseInt(parsedUrl.searchParams.get('limit') || '50', 10);
+        const limit = parseInt(parsedUrl.searchParams.get('limit') || '100', 10);
+        const offset = parseInt(parsedUrl.searchParams.get('offset') || '0', 10);
         const stmt = db.prepare(`
           SELECT id, tracking_id, device_info, network_env, task_results, created_at
           FROM diagnostic_reports
           ORDER BY created_at DESC
-          LIMIT ?
+          LIMIT ? OFFSET ?
         `);
-        const rows = stmt.all(limit);
+        const rows = stmt.all(limit, offset);
         const result = rows.map(r => {
           let deviceInfo = {};
           let networkEnv = {};

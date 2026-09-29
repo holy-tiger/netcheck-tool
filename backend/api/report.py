@@ -39,7 +39,7 @@ async def submit_report(payload: ReportPayloadSchema):
 
 @router.get("")
 @router.get("/")
-async def list_reports(limit: int = 50):
+async def list_reports(limit: int = 100, offset: int = 0):
     db = await get_db_connection()
     try:
         cursor = await db.execute(
@@ -47,9 +47,9 @@ async def list_reports(limit: int = 50):
             SELECT id, tracking_id, device_info, network_env, task_results, created_at
             FROM diagnostic_reports
             ORDER BY created_at DESC
-            LIMIT ?
+            LIMIT ? OFFSET ?
             """,
-            (limit,)
+            (limit, offset)
         )
         rows = await cursor.fetchall()
         result = []

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -663,13 +664,14 @@ fun IdleInputCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // One-Tap Full Network Health Check Secondary Button
+            // One-Tap Network Check Secondary Button
             OutlinedButton(
                 onClick = onQuickCheck,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .heightIn(min = 48.dp)
                     .testTag("quick_check_button"),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(14.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
             ) {
@@ -679,12 +681,15 @@ fun IdleInputCard(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = stringResource(R.string.quick_check_button),
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.SemiBold
                     ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
