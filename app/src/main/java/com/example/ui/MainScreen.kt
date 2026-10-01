@@ -12,6 +12,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -53,6 +56,7 @@ import androidx.compose.material.icons.filled.SettingsEthernet
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -69,6 +73,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -90,23 +96,34 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.R
 import com.example.core.AppLanguage
 import com.example.core.SystemUtils
 import com.example.data.DiagnosticHistoryEntity
+import com.example.ui.expert.ExpertScreen
+import com.example.ui.expert.ExpertViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+enum class MainScreenTab {
+    SUPPORT,
+    EXPERT
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +132,8 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val appState by viewModel.appState.collectAsStateWithLifecycle()
     val trackingId by viewModel.currentTrackingId.collectAsStateWithLifecycle()
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
@@ -125,6 +144,9 @@ fun MainScreen(
     var inputCommand by remember {
         mutableStateOf("")
     }
+
+    var currentTab by remember { mutableStateOf(MainScreenTab.SUPPORT) }
+    val expertViewModel: ExpertViewModel = viewModel()
 
     var selectedHistoryItem by remember { mutableStateOf<DiagnosticHistoryEntity?>(null) }
     val networkEnv = remember { SystemUtils.getNetworkEnv(context) }
@@ -153,9 +175,13 @@ fun MainScreen(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f, fill = false)) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = stringResource(R.string.title_network_diagnostic),
+                                text = if (currentTab == MainScreenTab.EXPERT) {
+                                    stringResource(R.string.expert_title)
+                                } else {
+                                    stringResource(R.string.title_network_diagnostic)
+                                },
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.2.sp
@@ -168,11 +194,15 @@ fun MainScreen(
                                     modifier = Modifier
                                         .size(6.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF10B981))
+                                        .background(if (currentTab == MainScreenTab.EXPERT) Color(0xFF0284C7) else Color(0xFF10B981))
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = stringResource(R.string.app_subtitle),
+                                    text = if (currentTab == MainScreenTab.EXPERT) {
+                                        stringResource(R.string.expert_subtitle)
+                                    } else {
+                                        stringResource(R.string.app_subtitle)
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -253,15 +283,74 @@ fun MainScreen(
                 )
             )
         },
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                NavigationBarItem(
+                    selected = currentTab == MainScreenTab.SUPPORT,
+                    onClick = { currentTab = MainScreenTab.SUPPORT },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Terminal,
+                            contentDescription = stringResource(R.string.nav_support_mode)
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = stringResource(R.string.nav_support_mode),
+                            fontWeight = if (currentTab == MainScreenTab.SUPPORT) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    modifier = Modifier.testTag("nav_support_tab")
+                )
+
+                NavigationBarItem(
+                    selected = currentTab == MainScreenTab.EXPERT,
+                    onClick = { currentTab = MainScreenTab.EXPERT },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = stringResource(R.string.nav_expert_mode)
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = stringResource(R.string.nav_expert_mode),
+                            fontWeight = if (currentTab == MainScreenTab.EXPERT) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    modifier = Modifier.testTag("nav_expert_tab")
+                )
+            }
+        },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        when (currentTab) {
+            MainScreenTab.EXPERT -> {
+                ExpertScreen(
+                    viewModel = expertViewModel,
+                    currentLanguage = currentLanguage,
+                    onNavigateBack = { currentTab = MainScreenTab.SUPPORT },
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+            MainScreenTab.SUPPORT -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
             item { Spacer(modifier = Modifier.height(2.dp)) }
 
             // 1. Device & Network Environment Status Card
@@ -365,6 +454,8 @@ fun MainScreen(
             }
 
             item { Spacer(modifier = Modifier.height(24.dp)) }
+                }
+            }
         }
     }
 
@@ -532,8 +623,19 @@ fun IdleInputCard(
     onQuickCheck: () -> Unit = {},
     onStart: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                focusManager.clearFocus()
+                keyboardController?.hide()
+            },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -581,10 +683,19 @@ fun IdleInputCard(
                     .fillMaxWidth()
                     .height(120.dp)
                     .testTag("instruction_input"),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                }),
                 trailingIcon = {
                     if (input.isNotEmpty()) {
                         IconButton(
-                            onClick = onClear,
+                            onClick = {
+                                onClear()
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                            },
                             modifier = Modifier.testTag("clear_input_button")
                         ) {
                             Icon(

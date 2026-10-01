@@ -108,35 +108,41 @@
             </div>
 
             <!-- Test Options -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
-              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
-                <input type="checkbox" id="optPing" checked class="w-4 h-4 text-blue-600 rounded mr-2">
-                <span><i class="fa-solid fa-signal mr-1 text-slate-400"></i> Ping 连通探测</span>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span><i class="fa-solid fa-list-check text-blue-600 mr-1.5"></i> 选择探测项目 (可多选)</span>
+                <span class="text-[11px] text-slate-400">支持自由组合探测</span>
               </label>
-              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
-                <input type="checkbox" id="optDns" checked class="w-4 h-4 text-blue-600 rounded mr-2">
-                <span><i class="fa-solid fa-globe mr-1 text-slate-400"></i> DNS 域名解析</span>
-              </label>
-              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
-                <input type="checkbox" id="optHttp" checked class="w-4 h-4 text-blue-600 rounded mr-2">
-                <span><i class="fa-solid fa-link mr-1 text-slate-400"></i> HTTP 网页连通</span>
-              </label>
-              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700">
-                <input type="checkbox" id="optTcp" checked class="w-4 h-4 text-blue-600 rounded mr-2">
-                <span><i class="fa-solid fa-network-wired mr-1 text-slate-400"></i> TCP 端口探测</span>
-              </label>
-              <label class="flex items-center p-2.5 border border-purple-200 rounded-xl bg-purple-50/60 hover:bg-purple-100/60 cursor-pointer text-xs font-semibold text-purple-900 transition-all">
-                <input type="checkbox" id="optDoh" onchange="toggleDohSection()" class="w-4 h-4 text-purple-600 rounded mr-2">
-                <span><i class="fa-solid fa-shield-halved mr-1 text-purple-600"></i> DoH 检测 (加密DNS)</span>
-              </label>
-              <label class="flex items-center p-2.5 border border-indigo-200 rounded-xl bg-indigo-50/60 hover:bg-indigo-100/60 cursor-pointer text-xs font-semibold text-indigo-900 transition-all">
-                <input type="checkbox" id="optProxy" onchange="toggleProxySection()" class="w-4 h-4 text-indigo-600 rounded mr-2">
-                <span><i class="fa-solid fa-server mr-1 text-indigo-600"></i> 内置代理测试</span>
-              </label>
-              <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 sm:col-span-3">
-                <input type="checkbox" id="optSpeed" class="w-4 h-4 text-blue-600 rounded mr-2">
-                <span><i class="fa-solid fa-gauge-high mr-1 text-blue-500"></i> 下载网速测速 (Speed Test)</span>
-              </label>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                  <input type="checkbox" id="optPing" checked class="w-4 h-4 text-blue-600 rounded mr-2 focus:ring-blue-500">
+                  <span><i class="fa-solid fa-signal mr-1.5 text-blue-600"></i> Ping 连通探测</span>
+                </label>
+                <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                  <input type="checkbox" id="optDns" checked class="w-4 h-4 text-blue-600 rounded mr-2 focus:ring-blue-500">
+                  <span><i class="fa-solid fa-globe mr-1.5 text-blue-600"></i> DNS 域名解析</span>
+                </label>
+                <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                  <input type="checkbox" id="optHttp" checked class="w-4 h-4 text-blue-600 rounded mr-2 focus:ring-blue-500">
+                  <span><i class="fa-solid fa-link mr-1.5 text-blue-600"></i> HTTP 网页连通</span>
+                </label>
+                <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                  <input type="checkbox" id="optTcp" checked class="w-4 h-4 text-blue-600 rounded mr-2 focus:ring-blue-500">
+                  <span><i class="fa-solid fa-network-wired mr-1.5 text-blue-600"></i> TCP 端口探测</span>
+                </label>
+                <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                  <input type="checkbox" id="optDoh" onchange="toggleDohSection()" class="w-4 h-4 text-blue-600 rounded mr-2 focus:ring-blue-500">
+                  <span><i class="fa-solid fa-shield-halved mr-1.5 text-blue-600"></i> DoH 检测 (加密DNS)</span>
+                </label>
+                <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                  <input type="checkbox" id="optProxy" onchange="toggleProxySection()" class="w-4 h-4 text-blue-600 rounded mr-2 focus:ring-blue-500">
+                  <span><i class="fa-solid fa-server mr-1.5 text-blue-600"></i> 内置代理测试</span>
+                </label>
+                <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 sm:col-span-3 transition-colors">
+                  <input type="checkbox" id="optSpeed" class="w-4 h-4 text-blue-600 rounded mr-2 focus:ring-blue-500">
+                  <span><i class="fa-solid fa-gauge-high mr-1.5 text-blue-600"></i> 下载网速测速 (Speed Test)</span>
+                </label>
+              </div>
             </div>
 
             <!-- Speed Test File URL Input -->
@@ -153,12 +159,12 @@
             </div>
 
             <!-- DoH Dedicated Input Section (Hidden by default, shown when optDoh is checked) -->
-            <div id="dohConfigPanel" class="hidden p-4 rounded-xl border border-purple-200 bg-purple-50/40 space-y-3 transition-all">
-              <div class="flex items-center justify-between border-b border-purple-200/70 pb-2">
-                <span class="text-xs font-bold text-purple-900 flex items-center">
-                  <i class="fa-solid fa-shield-halved text-purple-600 mr-1.5"></i> DoH (DNS over HTTPS) 专项检测配置
+            <div id="dohConfigPanel" class="hidden p-4 rounded-xl border border-slate-200 bg-blue-50/20 space-y-3 transition-all">
+              <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span class="text-xs font-bold text-slate-800 flex items-center">
+                  <i class="fa-solid fa-shield-halved text-blue-600 mr-1.5"></i> DoH (DNS over HTTPS) 专项检测配置
                 </span>
-                <span class="text-[10px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded">独立输入</span>
+                <span class="text-[10px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded">独立输入</span>
               </div>
               
               <div>
@@ -167,15 +173,15 @@
                 </label>
                 <textarea 
                   id="dohServersInput" 
-                  rows="3" 
+                  rows="2" 
                   placeholder="例如: https://cloudflare-dns.com/dns-query&#10;https://dns.google/dns-query"
-                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm transition-all leading-relaxed">https://cloudflare-dns.com/dns-query&#10;https://dns.google/dns-query</textarea>
+                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all leading-relaxed">https://cloudflare-dns.com/dns-query&#10;https://dns.google/dns-query</textarea>
                 <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
                   <span class="text-[10px] text-slate-400">快速填入：</span>
-                  <button type="button" onclick="addDohServer('https://cloudflare-dns.com/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-2 py-0.5 rounded shadow-xs">Cloudflare</button>
-                  <button type="button" onclick="addDohServer('https://dns.google/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-2 py-0.5 rounded shadow-xs">Google</button>
-                  <button type="button" onclick="addDohServer('https://dns.alidns.com/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-2 py-0.5 rounded shadow-xs">阿里AliDNS</button>
-                  <button type="button" onclick="addDohServer('https://doh.pub/dns-query')" class="text-[10px] bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-2 py-0.5 rounded shadow-xs">腾讯DNSPod</button>
+                  <button type="button" onclick="addDohServer('https://cloudflare-dns.com/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">Cloudflare</button>
+                  <button type="button" onclick="addDohServer('https://dns.google/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">Google</button>
+                  <button type="button" onclick="addDohServer('https://dns.alidns.com/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">阿里AliDNS</button>
+                  <button type="button" onclick="addDohServer('https://doh.pub/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">腾讯DNSPod</button>
                 </div>
               </div>
 
@@ -185,19 +191,19 @@
                 </label>
                 <textarea 
                   id="dohDomainsInput" 
-                  rows="3" 
-                  placeholder="例如: google.com&#10;cloudflare.com&#10;github.com"
-                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm transition-all leading-relaxed">google.com&#10;cloudflare.com</textarea>
+                  rows="2" 
+                  placeholder="例如: google.com&#10;cloudflare.com"
+                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all leading-relaxed">google.com&#10;cloudflare.com</textarea>
               </div>
             </div>
 
             <!-- Built-in Proxy Server Dedicated Input Section (Hidden by default, shown when optProxy is checked) -->
-            <div id="proxyConfigPanel" class="hidden p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3.5 transition-all">
-              <div class="flex items-center justify-between border-b border-indigo-200/70 pb-2">
-                <span class="text-xs font-bold text-indigo-900 flex items-center">
-                  <i class="fa-solid fa-server text-indigo-600 mr-1.5"></i> 内置代理服务器测试 (Local Proxy &amp; Resolver)
+            <div id="proxyConfigPanel" class="hidden p-4 rounded-xl border border-slate-200 bg-blue-50/20 space-y-3.5 transition-all">
+              <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span class="text-xs font-bold text-slate-800 flex items-center">
+                  <i class="fa-solid fa-server text-blue-600 mr-1.5"></i> 内置代理服务器测试 (Local Proxy &amp; Resolver)
                 </span>
-                <span class="text-[10px] bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded">独立测试链路</span>
+                <span class="text-[10px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded">独立测试链路</span>
               </div>
 
               <div>
@@ -207,21 +213,90 @@
                 <textarea 
                   id="proxyUrlsInput" 
                   rows="2" 
-                  placeholder="例如: https://example.com&#10;https://www.google.com"
-                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all leading-relaxed">https://example.com</textarea>
+                  placeholder="例如: https://example.com"
+                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all leading-relaxed">https://example.com</textarea>
               </div>
 
+              <!-- Single Choice: DNS Resolution Mode -->
               <div>
-                <label class="block text-[11px] font-semibold text-slate-700 mb-1.5">
-                  访问方式 (多选，可同时勾选)
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span><i class="fa-solid fa-circle-dot text-blue-600 mr-1"></i> 代理 DNS 解析方式 (单选)</span>
+                  <span class="text-[10px] text-slate-400">选择上游域名解析机制</span>
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                  <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                    <input type="radio" name="proxyDnsMode" value="system" checked onchange="handleProxyDnsModeChange()" class="w-4 h-4 text-blue-600 focus:ring-blue-500 mr-1.5">
+                    <span>系统默认</span>
+                  </label>
+                  <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                    <input type="radio" name="proxyDnsMode" value="traditional" onchange="handleProxyDnsModeChange()" class="w-4 h-4 text-blue-600 focus:ring-blue-500 mr-1.5">
+                    <span>传统 DNS</span>
+                  </label>
+                  <label class="flex items-center p-2.5 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 cursor-pointer text-xs font-medium text-slate-700 transition-colors">
+                    <input type="radio" name="proxyDnsMode" value="doh" onchange="handleProxyDnsModeChange()" class="w-4 h-4 text-blue-600 focus:ring-blue-500 mr-1.5">
+                    <span>DoH 加密</span>
+                  </label>
+                </div>
+                <p id="proxyDnsSystemDesc" class="text-[10px] text-slate-500 mt-1.5">
+                  <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i> 通过 Android 系统网络默认 DNS 进行域名解析
+                </p>
+              </div>
+
+              <!-- Traditional DNS Field (Shown when traditional is selected) -->
+              <div id="proxyTraditionalDnsField" class="hidden">
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  上游传统 DNS 服务器 IP (例如: 8.8.8.8, 114.114.114.114)
+                </label>
+                <input 
+                  type="text" 
+                  id="proxyDnsServersInput" 
+                  placeholder="例如: 8.8.8.8"
+                  value="8.8.8.8"
+                  class="w-full text-xs font-mono px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
+                />
+                <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  <span class="text-[10px] text-slate-400">快速填入：</span>
+                  <button type="button" onclick="setProxyDnsServer('8.8.8.8')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">8.8.8.8 (Google)</button>
+                  <button type="button" onclick="setProxyDnsServer('114.114.114.114')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">114.114.114.114</button>
+                  <button type="button" onclick="setProxyDnsServer('1.1.1.1')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">1.1.1.1 (CF)</button>
+                  <button type="button" onclick="setProxyDnsServer('223.5.5.5')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">223.5.5.5 (阿里)</button>
+                </div>
+              </div>
+
+              <!-- DoH Field (Shown when doh is selected) -->
+              <div id="proxyDohField" class="hidden">
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
+                  上游 DoH 服务器 URL (例如: https://cloudflare-dns.com/dns-query)
+                </label>
+                <input 
+                  type="text" 
+                  id="proxyDohServersInput" 
+                  placeholder="例如: https://cloudflare-dns.com/dns-query"
+                  value="https://cloudflare-dns.com/dns-query"
+                  class="w-full text-xs font-mono px-3 py-2 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
+                />
+                <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  <span class="text-[10px] text-slate-400">快速填入：</span>
+                  <button type="button" onclick="setProxyDohServer('https://cloudflare-dns.com/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">Cloudflare</button>
+                  <button type="button" onclick="setProxyDohServer('https://dns.google/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">Google</button>
+                  <button type="button" onclick="setProxyDohServer('https://dns.alidns.com/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">阿里AliDNS</button>
+                  <button type="button" onclick="setProxyDohServer('https://doh.pub/dns-query')" class="text-[10px] bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 px-2 py-0.5 rounded shadow-xs">腾讯DNSPod</button>
+                </div>
+              </div>
+
+              <!-- Multiple Choice: Proxy Access Mode -->
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span><i class="fa-solid fa-square-check text-blue-600 mr-1"></i> 访问方式 (可多选)</span>
+                  <span class="text-[10px] text-slate-400">可同时勾选</span>
                 </label>
                 <div class="flex items-center space-x-5">
                   <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
-                    <input type="checkbox" id="proxyModeNative" checked class="w-4 h-4 text-indigo-600 rounded mr-1.5">
-                    <span><i class="fa-solid fa-bolt text-indigo-500 mr-1"></i> 原生 Native 访问</span>
+                    <input type="checkbox" id="proxyModeNative" checked class="w-4 h-4 text-blue-600 rounded mr-1.5 focus:ring-blue-500">
+                    <span><i class="fa-solid fa-bolt text-blue-500 mr-1"></i> 原生 Native 访问</span>
                   </label>
                   <label class="flex items-center text-xs font-medium text-slate-700 cursor-pointer">
-                    <input type="checkbox" id="proxyModeWebview" checked class="w-4 h-4 text-indigo-600 rounded mr-1.5">
+                    <input type="checkbox" id="proxyModeWebview" checked class="w-4 h-4 text-blue-600 rounded mr-1.5 focus:ring-blue-500">
                     <span><i class="fa-brands fa-chrome text-blue-500 mr-1"></i> WebView 页面访问</span>
                   </label>
                 </div>
@@ -229,49 +304,13 @@
 
               <div>
                 <label class="block text-[11px] font-semibold text-slate-700 mb-1">
-                  指定 DoH 服务器 (支持多个，换行或逗号分隔)
-                </label>
-                <textarea 
-                  id="proxyDohServersInput" 
-                  rows="3" 
-                  placeholder="例如: https://cloudflare-dns.com/dns-query&#10;https://dns.google/dns-query"
-                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all leading-relaxed">https://cloudflare-dns.com/dns-query</textarea>
-                <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <span class="text-[10px] text-slate-400">快速填入：</span>
-                  <button type="button" onclick="addProxyDohServer('https://cloudflare-dns.com/dns-query')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">Cloudflare</button>
-                  <button type="button" onclick="addProxyDohServer('https://dns.google/dns-query')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">Google</button>
-                  <button type="button" onclick="addProxyDohServer('https://dns.alidns.com/dns-query')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">阿里AliDNS</button>
-                  <button type="button" onclick="addProxyDohServer('https://doh.pub/dns-query')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">腾讯DNSPod</button>
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
-                  指定 DNS 服务器 (支持多个，换行或逗号分隔)
-                </label>
-                <textarea 
-                  id="proxyDnsServersInput" 
-                  rows="2" 
-                  placeholder="例如: 8.8.8.8&#10;1.1.1.1&#10;223.5.5.5"
-                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all leading-relaxed"></textarea>
-                <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <span class="text-[10px] text-slate-400">快速填入：</span>
-                  <button type="button" onclick="addProxyDnsServer('8.8.8.8')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">8.8.8.8 (Google)</button>
-                  <button type="button" onclick="addProxyDnsServer('1.1.1.1')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">1.1.1.1 (Cloudflare)</button>
-                  <button type="button" onclick="addProxyDnsServer('223.5.5.5')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">223.5.5.5 (阿里)</button>
-                  <button type="button" onclick="addProxyDnsServer('119.29.29.29')" class="text-[10px] bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-100 px-2 py-0.5 rounded shadow-xs">119.29.29.29 (腾讯)</button>
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-700 mb-1">
-                  指定 Host 和 IP 静态映射 (例如: example.com=93.184.216.34，支持换行或逗号分隔)
+                  指定 Host 和 IP 静态映射 (例如: example.com=93.184.216.34)
                 </label>
                 <textarea 
                   id="proxyHostsMappingInput" 
-                  rows="3" 
-                  placeholder="例如: example.com=93.184.216.34&#10;api.internal=10.0.0.1"
-                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all leading-relaxed">example.com=93.184.216.34</textarea>
+                  rows="2" 
+                  placeholder="例如: example.com=93.184.216.34"
+                  class="w-full text-xs font-mono p-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all leading-relaxed">example.com=93.184.216.34</textarea>
                 <p class="text-[10px] text-slate-400 mt-0.5">作为特定域名的强制解析映射，用于诊断节点劫持或定向测试</p>
               </div>
 
@@ -285,7 +324,7 @@
                     id="proxyPortInput" 
                     value="0" 
                     placeholder="0"
-                    class="w-28 text-xs font-mono p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                    class="w-28 text-xs font-mono p-2.5 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                   />
                   <span class="text-[11px] text-emerald-700 flex items-center">
                     <i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>
@@ -550,24 +589,25 @@
       }
     }
 
-    function addProxyDohServer(server) {
-      const input = document.getElementById('proxyDohServersInput');
-      const current = input.value.trim();
-      const list = current.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-      if (!list.includes(server)) {
-        list.push(server);
-        input.value = list.join('\n');
-      }
+    function handleProxyDnsModeChange() {
+      const mode = document.querySelector('input[name="proxyDnsMode"]:checked')?.value || 'system';
+      const descEl = document.getElementById('proxyDnsSystemDesc');
+      const traditionalField = document.getElementById('proxyTraditionalDnsField');
+      const dohField = document.getElementById('proxyDohField');
+
+      if (descEl) descEl.classList.toggle('hidden', mode !== 'system');
+      if (traditionalField) traditionalField.classList.toggle('hidden', mode !== 'traditional');
+      if (dohField) dohField.classList.toggle('hidden', mode !== 'doh');
     }
 
-    function addProxyDnsServer(dns) {
+    function setProxyDnsServer(dns) {
       const input = document.getElementById('proxyDnsServersInput');
-      const current = input.value.trim();
-      const list = current.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-      if (!list.includes(dns)) {
-        list.push(dns);
-        input.value = list.join('\n');
-      }
+      if (input) input.value = dns;
+    }
+
+    function setProxyDohServer(url) {
+      const input = document.getElementById('proxyDohServersInput');
+      if (input) input.value = url;
     }
 
     async function handleGenerate(e) {
@@ -592,8 +632,17 @@
       const proxy_modes = [];
       if (document.getElementById('proxyModeNative').checked) proxy_modes.push('native');
       if (document.getElementById('proxyModeWebview').checked) proxy_modes.push('webview');
-      const proxy_doh_servers = document.getElementById('proxyDohServersInput').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-      const proxy_dns_servers = document.getElementById('proxyDnsServersInput').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
+      const proxyDnsMode = document.querySelector('input[name="proxyDnsMode"]:checked')?.value || 'system';
+      let proxy_doh_servers = [];
+      let proxy_dns_servers = [];
+      if (proxyDnsMode === 'doh') {
+        const dohVal = document.getElementById('proxyDohServersInput').value.trim();
+        proxy_doh_servers = dohVal ? dohVal.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : ['https://cloudflare-dns.com/dns-query'];
+      } else if (proxyDnsMode === 'traditional') {
+        const dnsVal = document.getElementById('proxyDnsServersInput').value.trim();
+        proxy_dns_servers = dnsVal ? dnsVal.split(/[\n,]+/).map(s => s.trim()).filter(Boolean) : ['8.8.8.8'];
+      }
 
       const proxy_hosts_mapping = {};
       const hostLines = document.getElementById('proxyHostsMappingInput').value.split(/[\n,]+/);
