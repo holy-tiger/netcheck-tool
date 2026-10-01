@@ -618,6 +618,7 @@ object NetworkEngine {
                             deferred.complete(true)
                         }
 
+                        @Suppress("DEPRECATION")
                         override fun onReceivedError(
                             view: android.webkit.WebView?,
                             errorCode: Int,
@@ -625,8 +626,24 @@ object NetworkEngine {
                             failingUrl: String?
                         ) {
                             super.onReceivedError(view, errorCode, description, failingUrl)
-                            sbLog.append("[WebView Error]: ").append(description).append(" (Code: ").append(errorCode).append(")\n")
-                            deferred.complete(false)
+                            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) {
+                                sbLog.append("[WebView Error]: ").append(description).append(" (Code: ").append(errorCode).append(")\n")
+                                deferred.complete(false)
+                            }
+                        }
+
+                        override fun onReceivedError(
+                            view: android.webkit.WebView?,
+                            request: android.webkit.WebResourceRequest?,
+                            error: android.webkit.WebResourceError?
+                        ) {
+                            super.onReceivedError(view, request, error)
+                            if (request?.isForMainFrame == true) {
+                                val desc = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) error?.description else null
+                                val code = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) error?.errorCode else null
+                                sbLog.append("[WebView Error]: ").append(desc).append(" (Code: ").append(code).append(")\n")
+                                deferred.complete(false)
+                            }
                         }
                     }
 

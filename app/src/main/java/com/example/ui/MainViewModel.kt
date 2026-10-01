@@ -365,7 +365,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 // 4.5 智能诊断分析与解决方案生成
                 _statusMessage.value = lContext.getString(R.string.step_analyzing)
-                val analysis = NetworkDiagnosticAnalyzer.analyze(executedResults)
+                val analysis = NetworkDiagnosticAnalyzer.analyze(executedResults, _currentLanguage.value)
                 _analysisReport.value = analysis
 
                 // 序列化所有执行结果

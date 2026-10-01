@@ -933,20 +933,30 @@
           const issuesHtml = (parsed.issues || []).map(i => `<li class="text-rose-700 text-xs flex items-start"><i class="fa-solid fa-triangle-exclamation mr-1.5 mt-0.5 text-rose-500 shrink-0"></i><span>${i}</span></li>`).join('');
           const solutionsHtml = (parsed.solutions || []).map((s, idx) => `<li class="text-slate-800 text-xs flex items-start"><span class="bg-indigo-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] mr-2 shrink-0 mt-0.5">${idx+1}</span><span>${s}</span></li>`).join('');
 
+          const currentLang = localStorage.getItem('netcheck_web_lang') || 'en';
+          const dict = i18n[currentLang] || i18n.en;
+
+          const titleText = dict.analysis_title || "智能诊断结论与解决方案建议";
+          const issuesLabel = dict.analysis_issues || "检出的异常问题:";
+          const solutionsLabel = dict.analysis_solutions || "客服与工程师排障方案:";
+          const statusBadgeText = parsed.status === 'PASS' 
+            ? (dict.status_pass || '✅ 检测正常 PASS')
+            : (parsed.status === 'WARN' ? (dict.status_warn || '⚠️ 存在隐患 WARNING') : (dict.status_crit || '❌ 发现故障 CRITICAL'));
+
           analysisHtml = `
             <div class="border-2 ${statusBg} rounded-2xl p-4 mb-4 shadow-sm">
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
                   <i class="fa-solid fa-wand-magic-sparkles text-indigo-600 text-sm"></i>
-                  <span class="font-bold text-sm text-slate-900">智能诊断结论与解决方案建议</span>
+                  <span class="font-bold text-sm text-slate-900">${titleText}</span>
                 </div>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeBg}">
-                  ${parsed.status === 'PASS' ? '✅ 检测正常 PASS' : (parsed.status === 'WARN' ? '⚠️ 存在隐患 WARNING' : '❌ 发现故障 CRITICAL')}
+                  ${statusBadgeText}
                 </span>
               </div>
               <p class="text-xs ${statusText} font-medium leading-relaxed bg-white/70 p-2.5 rounded-xl border border-slate-200/60 mb-3">${parsed.summary || ''}</p>
-              ${parsed.issues && parsed.issues.length ? `<div class="mb-3"><div class="text-[11px] font-bold text-rose-800 mb-1.5 flex items-center"><i class="fa-solid fa-circle-exclamation mr-1 text-rose-600"></i> 检出的异常问题:</div><ul class="space-y-1.5 pl-1">${issuesHtml}</ul></div>` : ''}
-              ${parsed.solutions && parsed.solutions.length ? `<div><div class="text-[11px] font-bold text-emerald-800 mb-1.5 flex items-center"><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> 客服与工程师排障方案:</div><ul class="space-y-1.5 pl-1">${solutionsHtml}</ul></div>` : ''}
+              ${parsed.issues && parsed.issues.length ? `<div class="mb-3"><div class="text-[11px] font-bold text-rose-800 mb-1.5 flex items-center"><i class="fa-solid fa-circle-exclamation mr-1 text-rose-600"></i> ${issuesLabel}</div><ul class="space-y-1.5 pl-1">${issuesHtml}</ul></div>` : ''}
+              ${parsed.solutions && parsed.solutions.length ? `<div><div class="text-[11px] font-bold text-emerald-800 mb-1.5 flex items-center"><i class="fa-solid fa-circle-check mr-1 text-emerald-600"></i> ${solutionsLabel}</div><ul class="space-y-1.5 pl-1">${solutionsHtml}</ul></div>` : ''}
             </div>
           `;
         }
@@ -1001,7 +1011,13 @@
         th_device: "设备型号 / 系统",
         th_network: "网络环境",
         th_status: "执行状态",
-        th_time: "上报时间 / 操作"
+        th_time: "上报时间 / 操作",
+        analysis_title: "智能诊断结论与解决方案建议",
+        analysis_issues: "检出的异常问题:",
+        analysis_solutions: "客服与工程师排障方案:",
+        status_pass: "✅ 检测正常 PASS",
+        status_warn: "⚠️ 存在隐患 WARNING",
+        status_crit: "❌ 发现故障 CRITICAL"
       },
       en: {
         title: "NetCheck Support Diagnostics Console",
@@ -1023,7 +1039,13 @@
         th_device: "Device / OS",
         th_network: "Network Env",
         th_status: "Probe Status",
-        th_time: "Time / Action"
+        th_time: "Time / Action",
+        analysis_title: "Smart Diagnostics & Solutions",
+        analysis_issues: "Detected Issues:",
+        analysis_solutions: "Recommended Action Plan:",
+        status_pass: "✅ Normal PASS",
+        status_warn: "⚠️ Warning WARNING",
+        status_crit: "❌ Critical CRITICAL"
       },
       ar: {
         title: "لوحة تحكم NetCheck لتشخيص الشبكة",
@@ -1045,7 +1067,13 @@
         th_device: "طراز الجهاز / النظام",
         th_network: "بيئة الشبكة",
         th_status: "حالة الفحص",
-        th_time: "الوقت / الإجراء"
+        th_time: "الوقت / الإجراء",
+        analysis_title: "نتائج التشخيص الذكي والحلول المقترحة",
+        analysis_issues: "المشكلات المكتشفة:",
+        analysis_solutions: "خطة الحلول الموصى بها:",
+        status_pass: "✅ سليم PASS",
+        status_warn: "⚠️ تحذير WARNING",
+        status_crit: "❌ خطأ فادح CRITICAL"
       }
     };
 
